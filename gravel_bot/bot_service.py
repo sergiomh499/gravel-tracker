@@ -3,9 +3,10 @@ gravel_bot.bot_service - Servicio Interactivo de Telegram Bot (Polling y Comando
 Soporta personalización multiusuario por perfil (altura, presupuesto, transmisión),
 cálculo dinámico de talla por fabricante y validación automática de enlaces y fichas.
 """
-
+from __future__ import annotations
 import os
 import time
+from typing import Dict, Any, Optional, List, Tuple
 import json
 import threading
 import traceback
