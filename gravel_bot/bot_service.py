@@ -8,6 +8,8 @@ import time
 import json
 import threading
 import traceback
+import http.server
+import socketserver
 import urllib.request
 import urllib.error
 from gravel_bot.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
@@ -432,11 +434,36 @@ def handle_incoming_message(msg: Dict[str, Any]):
         if chat_id:
             send_reply(chat_id, f"⚠️ Error al procesar tu solicitud: {e}")
 
+class CloudHealthHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"status":"healthy","service":"gravel-bot-madrid"}\n')
+
+    def log_message(self, format, *args):
+        pass
+
+def _start_cloud_health_server(port: int):
+    try:
+        import socketserver
+        class ReusableTCPServer(socketserver.TCPServer):
+            allow_reuse_address = True
+        with ReusableTCPServer(("", port), CloudHealthHandler) as httpd:
+            print(f"🌐 [CLOUD HEALTH] Servidor de comprobación activo en puerto {port} (Render / Koyeb).")
+            httpd.serve_forever()
+    except Exception as e:
+        print(f"⚠️ [CLOUD HEALTH] No se pudo iniciar en puerto {port}: {e}")
+
 def run_bot_polling(duration_seconds: Optional[int] = None):
-    """Bucle de escucha de mensajes en Telegram con long-polling y soporte para ejecución acotada en GitHub Actions."""
+    """Bucle de escucha de mensajes en Telegram con long-polling y soporte para ejecución acotada o continua en la nube."""
     if not TELEGRAM_BOT_TOKEN:
         print("❌ TELEGRAM_BOT_TOKEN no configurado.")
         return
+
+    port_env = os.environ.get("PORT")
+    if port_env and port_env.isdigit():
+        threading.Thread(target=_start_cloud_health_server, args=(int(port_env),), daemon=True).start()
 
     print("🤖 [BOT POLLING] Escuchando comandos en Telegram para @GravelDealSearchBot...")
     start_time = time.time()
