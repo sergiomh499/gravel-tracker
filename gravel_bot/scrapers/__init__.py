@@ -9,6 +9,7 @@ from gravel_bot.scrapers.mammoth import MammothScraper
 from gravel_bot.scrapers.sanferbike import SanferbikeScraper
 from gravel_bot.scrapers.wallapop import WallapopMadridScraper
 from gravel_bot.scrapers.outlets import OutletAggregatorScraper
+from gravel_bot.scrapers.chollometro import ChollometroScraper
 
 ACTIVE_SCRAPERS: List[BaseScraper] = [
     SanferbikeScraper(),
@@ -16,6 +17,7 @@ ACTIVE_SCRAPERS: List[BaseScraper] = [
     MammothScraper(),
     WallapopMadridScraper(),
     OutletAggregatorScraper(),
+    ChollometroScraper(),
 ]
 
 def get_all_scrapers() -> List[BaseScraper]:

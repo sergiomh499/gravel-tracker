@@ -93,7 +93,53 @@ if __name__ == "__main__":
             buscar_gangas()
         elif cmd in ["--pure-deals", "pure-deals", "--chollos"]:
             from gravel_bot.deal_detector import format_pure_deals_message
-            print(format_pure_deals_message())
+            max_p = None
+            min_pct = 20.0
+            for arg in sys.argv[2:]:
+                if arg.endswith("%"):
+                    val = arg.rstrip("%")
+                    if val.replace(".", "").isdigit():
+                        min_pct = float(val)
+                elif arg.replace(".", "").isdigit():
+                    num = float(arg)
+                    if num <= 70 and ("--pct" in sys.argv or "%" in "".join(sys.argv)):
+                        min_pct = num
+                    else:
+                        max_p = num
+            print(format_pure_deals_message(max_price=max_p, min_discount_pct=min_pct))
+        elif cmd in ["--historial", "historial", "--history"]:
+            from gravel_bot.deal_detector import format_bike_price_history_message
+            target = sys.argv[2] if len(sys.argv) > 2 else "Kalima"
+            print(format_bike_price_history_message(target))
+        elif cmd in ["--info", "info", "--ficha", "ficha", "--detalle"]:
+            from gravel_bot.bike_inspector import format_detailed_bike_card
+            query = sys.argv[2] if len(sys.argv) > 2 else "Conor Kalima"
+            print(format_detailed_bike_card(query))
+        elif cmd in ["--disponibles", "disponibles", "--catalogo", "catalogo"]:
+            from gravel_bot.bike_inspector import format_available_bikes_message
+            tier_f = sys.argv[2] if len(sys.argv) > 2 else None
+            print(format_available_bikes_message(tier=tier_f))
+        elif cmd in ["--stats", "stats"]:
+            from gravel_bot.bike_inspector import format_database_stats_message
+            print(format_database_stats_message())
+        elif cmd in ["--add-url", "add-url", "--ingest"]:
+            if len(sys.argv) > 2:
+                from gravel_bot.url_ingestor import ingest_bike_url
+                print(f"📥 Ingestando enlace de bicicleta: {sys.argv[2]}...")
+                ok, res_msg, _ = ingest_bike_url(sys.argv[2])
+                print(res_msg)
+            else:
+                print("⚠️ Uso: python3 gravel_tracker.py --add-url <URL_DEL_PRODUCTO>")
+        elif cmd in ["--add-store", "add-store"]:
+            if len(sys.argv) > 3:
+                from gravel_bot.url_ingestor import ingest_store
+                nombre = sys.argv[2]
+                url = sys.argv[3]
+                tipo = sys.argv[4] if len(sys.argv) > 4 else "online"
+                ok, res_msg = ingest_store(nombre=nombre, url=url, tipo=tipo)
+                print(res_msg)
+            else:
+                print("⚠️ Uso: python3 gravel_tracker.py --add-store <NOMBRE> <URL> [TIPO]")
         elif cmd in ["--tiendas", "tiendas", "--stores"]:
             from gravel_bot.store_recommender import format_stores_recommendation_message
             print(format_stores_recommendation_message())

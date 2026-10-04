@@ -101,10 +101,8 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
 
     # 9. Veredicto sintético
     veredicto = f"Detectado {marca} con {transmision_desc} y {frenos_desc}. {explicacion_talla}"
-    # Generar Slug limpio
-    clean_title = re.sub(r'[^a-zA-Z0-9]+', '_', title.lower()).strip('_')[:40]
-    slug = f"{clean_title}_{int(price)}"
-
+    # Generar Slug limpio e invariante al precio para acumular historial del mismo modelo
+    slug = re.sub(r'[^a-zA-Z0-9]+', '_', title.lower()).strip('_')[:50]
     return {
         "slug": slug,
         "marca": marca,

@@ -245,6 +245,63 @@ def record_price(bike_id: int, store_id: Optional[int], price: float, size: str,
     conn.commit()
     conn.close()
 
+def record_price_if_changed(bike_id: int, store_id: Optional[int], price: float, size: str = "", in_stock: int = 1, url: str = "", note: str = "") -> bool:
+    """
+    Registra una entrada en el historial de precios sólo si el precio ha variado o es el primer registro.
+    Evita duplicados redundantes del mismo precio en cada ciclo de rastreo.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT precio, en_stock FROM historial_precios
+    WHERE bicicleta_id = ?
+    ORDER BY id DESC LIMIT 1
+    """, (bike_id,))
+    last = c.fetchone()
+    
+    should_record = False
+    if not last or abs(last["precio"] - price) >= 0.5 or last["en_stock"] != in_stock:
+        should_record = True
+        c.execute("""
+        INSERT INTO historial_precios (bicicleta_id, tienda_id, precio, talla, en_stock, url, fecha_registro, nota_adicional)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (bike_id, store_id, price, size, in_stock, url, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), note))
+        conn.commit()
+    conn.close()
+    return should_record
+
+def get_bike_price_history(identifier: Any) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Recupera una bicicleta (por id o por slug/nombre) y toda su secuencia cronológica de precios.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    
+    if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+        c.execute("SELECT * FROM bicicletas WHERE id = ?", (int(identifier),))
+    else:
+        c.execute("""
+        SELECT * FROM bicicletas 
+        WHERE slug = ? OR LOWER(modelo) LIKE ? OR LOWER(marca || ' ' || modelo) LIKE ?
+        ORDER BY id ASC LIMIT 1
+        """, (str(identifier), f"%{str(identifier).lower()}%", f"%{str(identifier).lower()}%"))
+        
+    bike_row = c.fetchone()
+    if not bike_row:
+        conn.close()
+        return None, []
+        
+    bike_data = dict(bike_row)
+    c.execute("""
+    SELECT h.*, t.nombre as tienda_nombre, t.url as tienda_url
+    FROM historial_precios h
+    LEFT JOIN tiendas t ON h.tienda_id = t.id
+    WHERE h.bicicleta_id = ?
+    ORDER BY h.fecha_registro ASC
+    """, (bike_data["id"],))
+    history_rows = c.fetchall()
+    conn.close()
+    return bike_data, [dict(r) for r in history_rows]
 def was_alert_sent(bike_id: int, current_price: float) -> bool:
     """Verifica si ya se envió una alerta para esta bici a este precio o menor."""
     conn = get_connection()

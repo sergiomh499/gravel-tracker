@@ -449,18 +449,150 @@ class TestStoreRecommender(unittest.TestCase):
         self.assertIn("Calmera Ciclismo", msg)
 
 class TestPureDealDetector(unittest.TestCase):
-    """Pruebas sobre el detector puro de gangas por diferencia de precio."""
+    """Pruebas sobre el detector puro de gangas por diferencia de precio y porcentaje."""
 
-    def test_pure_deals_sorting(self):
-        """Verifica que las ofertas se ordenen por ahorro económico real."""
+    def test_pure_deals_sorting_and_filtering(self):
+        """Verifica que las ofertas se ordenen por porcentaje y respeten el filtro de precio máximo."""
         from gravel_bot.deal_detector import get_pure_deals, format_pure_deals_message
-        deals = get_pure_deals(sort_by="ahorro_eur", limit=5)
-        if deals:
-            for d in deals:
-                self.assertGreater(d["ahorro_eur"], 0.0)
+        deals_pct = get_pure_deals(sort_by="descuento_pct", limit=5, max_price=1200.0)
+        if deals_pct:
+            for d in deals_pct:
+                self.assertLessEqual(d["precio_oferta"], 1200.0)
                 self.assertGreater(d["descuento_pct"], 0.0)
 
-        msg = format_pure_deals_message()
+            # Comprobar orden descendente por porcentaje
+            pcts = [d["descuento_pct"] for d in deals_pct]
+            self.assertEqual(pcts, sorted(pcts, reverse=True))
+
+        msg = format_pure_deals_message(sort_by="descuento_pct", max_price=1200.0)
         self.assertIn("DETECTOR DE GANGAS", msg)
+        self.assertIn("1200 €", msg)
+
+class TestPriceHistoryEngine(unittest.TestCase):
+    """Pruebas sobre el registro de fluctuaciones y consulta de historial de precios."""
+
+    def test_price_history_recording_and_formatting(self):
+        from gravel_bot.db import record_price_if_changed, get_bike_price_history, upsert_bike, get_connection
+        from gravel_bot.deal_detector import format_bike_price_history_message
+
+        # Crear bicicleta de prueba temporal
+        temp_bike = {
+            "slug": "temp_history_gravel_bike",
+            "marca": "Conor",
+            "modelo": "Kalima History Test",
+            "ano": 2025,
+            "disciplina": "gravel",
+            "transmision": "Shimano GRX 2x10v",
+            "tipo_transmision": "2x10",
+            "frenos": "Shimano GRX Hidráulico",
+            "tipo_frenos": "hidraulico",
+            "cuadro": "Aluminio",
+            "horquilla": "Carbono",
+            "talla_recomendada_169": "SM (51 cm)",
+            "precio_pvp": 1399.0,
+            "precio_oferta": 1099.0,
+            "c1_frenos": 25.0, "c2_transmision": 25.0, "c3_cuadro": 14.0, "c4_precio": 18.0, "c5_talla": 10.0,
+            "puntuacion_total": 92.0, "nota": 9.2, "tier": "Tier S+"
+        }
+        b_id = upsert_bike(temp_bike)
+
+        # 1. Primer registro
+        rec1 = record_price_if_changed(b_id, 1, 1099.0, "SM", 1, "https://test.com/kalima", "Precio inicial")
+        self.assertTrue(rec1)
+
+        # 2. Mismo precio inmediato -> no debe duplicar fila
+        rec2 = record_price_if_changed(b_id, 1, 1099.0, "SM", 1, "https://test.com/kalima", "Re-escaneo sin cambio")
+        self.assertFalse(rec2)
+
+        # 3. Bajada de precio a 999 € -> debe registrarse
+        rec3 = record_price_if_changed(b_id, 1, 999.0, "SM", 1, "https://test.com/kalima", "Rebaja a 999 €")
+        self.assertTrue(rec3)
+
+        # Comprobar consulta cronológica
+        bike, history = get_bike_price_history("temp_history_gravel_bike")
+        self.assertIsNotNone(bike)
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["precio"], 1099.0)
+        self.assertEqual(history[1]["precio"], 999.0)
+
+        # Comprobar mensaje formateado
+        msg = format_bike_price_history_message("temp_history_gravel_bike")
+        self.assertIn("HISTORIAL DE PRECIOS", msg)
+        self.assertIn("Rebaja", msg)
+
+        # Limpieza
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM historial_precios WHERE bicicleta_id = ?", (b_id,))
+        c.execute("DELETE FROM bicicletas WHERE id = ?", (b_id,))
+        conn.commit()
+        conn.close()
+
+class TestBikeInspector(unittest.TestCase):
+    """Pruebas sobre la ficha técnica detallada, listado de stock y estadísticas globales."""
+
+    def test_detailed_bike_card(self):
+        from gravel_bot.bike_inspector import get_detailed_bike_info, format_detailed_bike_card
+        info = get_detailed_bike_info("Kalima")
+        self.assertIsNotNone(info)
+        self.assertEqual(info["marca"], "Conor")
+        self.assertIn("RX400", info["transmision"])
+        self.assertEqual(info["tipo_frenos"], "hidraulico")
+
+        card = format_detailed_bike_card("Kalima")
+        self.assertIn("FICHA DETALLADA", card)
+        self.assertIn("DÓNDE COMPRARLA", card)
+        self.assertIn("COMPONENTES DETALLADOS", card)
+        self.assertIn("VALORACIÓN Y RÚBRICA", card)
+
+    def test_database_stats(self):
+        from gravel_bot.bike_inspector import get_database_stats, format_database_stats_message
+        stats = get_database_stats()
+        self.assertGreater(stats["total_bicicletas"], 0)
+        self.assertGreater(stats["tiendas"], 0)
+        self.assertIn("Tier S+", stats["distribucion_tiers"])
+
+        msg = format_database_stats_message()
+        self.assertIn("ESTADÍSTICAS GLOBALES", msg)
+        self.assertIn("Total Modelos", msg)
+
+    def test_available_bikes_listing(self):
+        from gravel_bot.bike_inspector import get_available_bikes_list, format_available_bikes_message
+        avail = get_available_bikes_list(tier="Tier S+")
+        self.assertGreater(len(avail), 0)
+        for b in avail:
+            self.assertEqual(b["en_stock"], 1)
+            self.assertEqual(b["tier"], "Tier S+")
+
+        msg = format_available_bikes_message(tier="Tier S+")
+        self.assertIn("BICICLETAS DISPONIBLES EN STOCK", msg)
+
+class TestUrlIngestor(unittest.TestCase):
+    """Pruebas sobre el ingestor dinámico de URLs y tiendas."""
+
+    def test_metadata_extraction(self):
+        from gravel_bot.url_ingestor import extract_metadata_from_html
+        mock_html = """
+        <html>
+        <head>
+          <meta property="og:title" content="Megamo Jakar 30 2026 Raw" />
+          <meta property="og:price:amount" content="1199.00" />
+        </head>
+        <body>
+          <p>Talla: S</p>
+        </body>
+        </html>
+        """
+        meta = extract_metadata_from_html(mock_html, "https://tienda.com/jakar-30")
+        self.assertEqual(meta["title"], "Megamo Jakar 30 2026 Raw")
+        self.assertEqual(meta["price"], 1199.0)
+        self.assertIn("S", meta["sizes"])
+
+    def test_store_ingestion(self):
+        from gravel_bot.url_ingestor import ingest_store
+        ok, msg = ingest_store(nombre="Tienda Test Madrid", url="https://tiendatestmadrid.com", tipo="fisica", direccion="Calle Retama, Madrid")
+        self.assertTrue(ok)
+        self.assertIn("Tienda Test Madrid", msg)
+
 if __name__ == "__main__":
     unittest.main()

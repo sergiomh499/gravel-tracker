@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 from gravel_bot.config import ALERT_CRITERIA
 from gravel_bot.db import (
     init_db, get_or_create_store, upsert_bike,
-    record_price, was_alert_sent, mark_alert_sent
+    record_price_if_changed, was_alert_sent, mark_alert_sent
 )
 from gravel_bot.evaluator import detect_bike_specs
 from gravel_bot.scrapers import get_all_scrapers
@@ -66,8 +66,8 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True) -> Dict[str, An
                 bike_id = upsert_bike(specs)
                 saved_count += 1
 
-                # 3. Registro en Historial de Precios
-                record_price(
+                # 3. Registro en Historial de Precios (guarda cada cambio de precio y fecha)
+                record_price_if_changed(
                     bike_id=bike_id,
                     store_id=store_id,
                     price=item["price"],
@@ -76,7 +76,6 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True) -> Dict[str, An
                     url=item["url"],
                     note=f"Rastreo automático {scraper.store_name}"
                 )
-
                 # 4. Evaluación de Criterio de Alerta (Tier S+ o Tier S con nota >= umbral y precio accesible)
                 is_top_tier = specs["tier"] in ALERT_CRITERIA["tiers_permitidos"]
                 is_good_score = specs["nota"] >= ALERT_CRITERIA["nota_minima"]

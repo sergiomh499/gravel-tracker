@@ -198,15 +198,16 @@ def handle_incoming_message(msg: Dict[str, Any]):
         welcome = (
             "👋 <b>¡Hola! Soy tu Gravel Deals Bot de Madrid</b> 🚲\n\n"
             "Calculo la talla exacta <b>según la marca y modelo</b> y puntúo las mejores ofertas para tu presupuesto.\n\n"
-            "📌 <b>Comandos de Consulta:</b>\n"
+            "📌 <b>Comandos de Consulta y Fichas:</b>\n"
             " • <b>/ranking</b>: Tier list personalizado a tu fisionomía.\n"
-            " • <b>/chollazos</b>: Detector de gangas puras por ahorro económico (€ y %).\n"
+            " • <b>/catalogo</b>: Ver todas las bicicletas disponibles en stock.\n"
+            " • <code>/ficha [modelo]</code>: Ficha técnica detallada, componentes y dónde comprarla.\n"
+            " • <code>/historial [modelo]</code>: Evolución y fluctuaciones de precios.\n"
+            " • <code>/chollazos [máx €]</code>: Gangas por % de descuento (ej: <code>/chollazos 1200</code>).\n"
             " • <b>/tiendas</b>: Recomendador de tiendas físicas a visitar en Madrid.\n"
-            " • <b>/deals</b>: Ofertas de catálogo.\n"
-            " • <b>/top</b>: Compras Maestras (Tier S+).\n"
-            " • <b>/scan</b>: Rastreo en vivo de tiendas y outlets.\n"
-            " • <b>/validar</b>: Validador automático de enlaces, stock y tallas.\n"
-            " • <b>/stats</b>: Estado de la base de datos.\n\n"
+            " • <b>/stats</b>: Estadísticas globales de catálogo y precios.\n"
+            " • <code>/add [URL]</code>: Ingestar una nueva bici desde cualquier enlace web.\n"
+            " • <code>/add_tienda [Nombre] [URL]</code>: Registrar una nueva tienda.\n\n"
             "⚙️ <b>Personalización de tu Perfil:</b>\n"
             " • <b>/perfil</b>: Ver tu configuración y tallas por marca.\n"
             " • <code>/altura 172</code>: Ajustar tu estatura exacta en cm.\n"
@@ -294,11 +295,32 @@ def handle_incoming_message(msg: Dict[str, Any]):
     elif text in ["/deals", "/gangas", "/chollos", "deals", "ofertas"]:
         send_reply(chat_id, format_deals_message(chat_id))
 
-    elif text in ["/chollazos", "/gangaspuras", "/descuentos", "chollazos", "descuentos"]:
-        send_reply(chat_id, format_pure_deals_message(sort_by="ahorro_eur"))
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/chollazos", "/gangaspuras", "/descuentos", "/chollos", "chollazos"]):
+        parts = raw_text.split()
+        max_p = None
+        min_pct = 20.0
+        for p in parts[1:]:
+            if p.endswith("%"):
+                val = p.rstrip("%")
+                if val.replace(".", "").isdigit():
+                    min_pct = float(val)
+            elif p.replace(".", "").isdigit():
+                num = float(p)
+                if num <= 60 and ("%" in raw_text or len(parts) > 2):
+                    min_pct = num
+                else:
+                    max_p = num
+        send_reply(chat_id, format_pure_deals_message(sort_by="descuento_pct", max_price=max_p, min_discount_pct=min_pct))
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/historial", "/history", "/precio", "/precios", "historial"]):
+        parts = raw_text.split(maxsplit=1)
+        query = parts[1] if len(parts) > 1 else "Kalima"
+        from gravel_bot.deal_detector import format_bike_price_history_message
+        send_reply(chat_id, format_bike_price_history_message(query))
 
     elif text in ["/tiendas", "/tiendasfisicas", "/dondeir", "tiendas", "ruta"]:
         send_reply(chat_id, format_stores_recommendation_message())
+
     elif text in ["/top", "/splus", "top", "s+"]:
         init_db()
         prof = get_profile_for_chat(chat_id, username)
@@ -331,25 +353,44 @@ def handle_incoming_message(msg: Dict[str, Any]):
             "Escribe <b>/ranking</b> o <b>/deals</b> para consultar los resultados."
         )
         send_reply(chat_id, res_text)
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/catalogo", "/disponibles", "/bicis", "/stock", "catalogo", "disponibles"]):
+        parts = raw_text.split()
+        tier_arg = parts[1] if len(parts) > 1 and "tier" in parts[1].lower() else None
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(tier=tier_arg))
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/ficha", "/info", "/detalle", "ficha", "info"]):
+        parts = raw_text.split(maxsplit=1)
+        query = parts[1] if len(parts) > 1 else "Kalima"
+        from gravel_bot.bike_inspector import format_detailed_bike_card
+        send_reply(chat_id, format_detailed_bike_card(query))
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/add_tienda", "/anadirtienda", "add_tienda"]):
+        parts = raw_text.split()
+        if len(parts) >= 3:
+            nombre = parts[1]
+            url = parts[2]
+            tipo = parts[3] if len(parts) > 3 else "online"
+            from gravel_bot.url_ingestor import ingest_store
+            ok, res_text = ingest_store(nombre=nombre, url=url, tipo=tipo)
+            send_reply(chat_id, res_text)
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/add_tienda NombreTienda https://tienda.com [online/fisica]</code>")
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/add", "/anadir", "add"]):
+        parts = raw_text.split(maxsplit=1)
+        if len(parts) > 1 and parts[1].startswith("http"):
+            url = parts[1].strip()
+            send_reply(chat_id, f"📥 <i>Analizando e ingestado enlace:</i>\n<code>{url}</code>...")
+            from gravel_bot.url_ingestor import ingest_bike_url
+            ok, res_card, _ = ingest_bike_url(url)
+            send_reply(chat_id, res_card)
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/add https://tienda.com/producto-gravel</code>")
 
     elif text in ["/stats", "stats"]:
-        init_db()
-        bikes = get_all_bikes()
-        s_plus = len([b for b in bikes if b["tier"] == "Tier S+"])
-        s = len([b for b in bikes if b["tier"] == "Tier S"])
-        a = len([b for b in bikes if b["tier"] == "Tier A"])
-        c = len([b for b in bikes if b["tier"] == "Tier C"])
-        msg = (
-            "📊 <b>ESTADÍSTICAS DEL SISTEMA</b>\n\n"
-            f"🚲 Total modelos en base de datos: <b>{len(bikes)}</b>\n"
-            f" • Tier S+: {s_plus} modelos\n"
-            f" • Tier S: {s} modelos\n"
-            f" • Tier A: {a} modelos\n"
-            f" • Tier C: {c} modelos\n\n"
-            "🏢 Tiendas monitorizadas: <b>12</b> (Físicas en Madrid y online)"
-        )
-        send_reply(chat_id, msg)
-
+        from gravel_bot.bike_inspector import format_database_stats_message
+        send_reply(chat_id, format_database_stats_message())
     else:
         send_reply(chat_id, "❓ Comando no reconocido. Escribe <b>/help</b>, <b>/perfil</b> o <b>/ranking</b> para ver la información.")
 
