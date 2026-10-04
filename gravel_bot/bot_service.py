@@ -6,9 +6,10 @@ cálculo dinámico de talla por fabricante y validación automática de enlaces 
 
 import time
 import json
+import threading
+import traceback
 import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional
 from gravel_bot.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from gravel_bot.db import (
     init_db, get_all_bikes, get_deals,
@@ -181,7 +182,7 @@ def format_deals_message(chat_id: Optional[int] = None) -> str:
 
     return msg
 
-def handle_incoming_message(msg: Dict[str, Any]):
+def _process_message(msg: Dict[str, Any]):
     """Procesa un comando recibido en Telegram y responde al usuario de forma personalizada."""
     chat = msg.get("chat", {})
     chat_id = chat.get("id")
@@ -394,6 +395,17 @@ def handle_incoming_message(msg: Dict[str, Any]):
     else:
         send_reply(chat_id, "❓ Comando no reconocido. Escribe <b>/help</b>, <b>/perfil</b> o <b>/ranking</b> para ver la información.")
 
+def handle_incoming_message(msg: Dict[str, Any]):
+    """Procesa un comando recibido en Telegram capturando cualquier excepción para no congelar el bot."""
+    try:
+        _process_message(msg)
+    except Exception as e:
+        print(f"❌ Error en handle_incoming_message: {e}")
+        traceback.print_exc()
+        chat_id = msg.get("chat", {}).get("id")
+        if chat_id:
+            send_reply(chat_id, f"⚠️ Error al procesar tu solicitud: {e}")
+
 def run_bot_polling():
     """Bucle infinito de escucha de mensajes en Telegram con long-polling."""
     if not TELEGRAM_BOT_TOKEN:
@@ -417,7 +429,7 @@ def run_bot_polling():
                     offset = update["update_id"] + 1
                     msg = update.get("message")
                     if msg:
-                        handle_incoming_message(msg)
+                        threading.Thread(target=handle_incoming_message, args=(msg,), daemon=True).start()
                 if not updates:
                     time.sleep(1)
         except Exception as e:
