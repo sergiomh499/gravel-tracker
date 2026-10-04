@@ -5,7 +5,7 @@ gravel_bot.db - Gestión de Base de Datos SQLite, Persistencia y Deduplicación 
 import sqlite3
 import os
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from gravel_bot.config import DB_PATH
 
 def get_connection() -> sqlite3.Connection:

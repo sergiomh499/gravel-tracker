@@ -4,6 +4,7 @@ Soporta personalización multiusuario por perfil (altura, presupuesto, transmisi
 cálculo dinámico de talla por fabricante y validación automática de enlaces y fichas.
 """
 
+import os
 import time
 import json
 import threading
