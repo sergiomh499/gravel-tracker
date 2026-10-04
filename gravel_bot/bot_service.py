@@ -539,6 +539,7 @@ def run_bot_polling(duration_seconds: Optional[int] = None):
 
     print("🤖 [BOT POLLING] Escuchando comandos en Telegram para @GravelDealSearchBot...")
     start_time = time.time()
+    offset = None
     while True:
         if duration_seconds and (time.time() - start_time) >= duration_seconds:
             print(f"⏱️ [BOT POLLING] Sesión en la nube completada ({duration_seconds}s). Finalizando para persistir datos.")
