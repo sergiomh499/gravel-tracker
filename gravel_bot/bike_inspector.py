@@ -267,21 +267,26 @@ def format_available_bikes_message(tier: Optional[str] = None, max_price: Option
     if brand:
         filtros.append(f"Marca: {brand.capitalize()}")
     filtros_str = f" ({', '.join(filtros)})" if filtros else ""
+    total_encontradas = len(bikes)
+    bikes_mostradas = bikes[:10]
 
-    msg = f"🚲 <b>BICICLETAS DISPONIBLES EN STOCK{filtros_str}</b>\n\n"
-    for i, b in enumerate(bikes, 1):
+    msg = f"🚲 <b>BICICLETAS DISPONIBLES EN STOCK{filtros_str}</b> ({len(bikes_mostradas)} de {total_encontradas} modelos)\n\n"
+    for i, b in enumerate(bikes_mostradas, 1):
         nombre = f"{b['marca']} {b['modelo']}"
         oferta = int(b['precio_oferta'])
         pvp = int(b['precio_pvp'] or b['precio_oferta'])
         ahorro_str = f" <s>{pvp} €</s>" if pvp > oferta else ""
         url = b.get('url_oferta') or ""
         link_str = f"<a href='{url}'>{nombre}</a>" if url else nombre
-        tienda = (b.get('tienda_nombre') or "Tienda")[:20]
+        tienda = (b.get('tienda_nombre') or "Tienda")[:24]
         talla = b.get('talla_recomendada_169', 'S')
 
         msg += f"<b>{i}.</b> [{b['tier']}] <b>{b['nota']}/10</b> | {link_str}\n"
         msg += f"   💰 <b>{oferta} €</b>{ahorro_str} | 📏 Talla: <b>{talla}</b> | 📍 <i>{tienda}</i>\n"
         msg += f"   ⚙️ {b['transmision']} | {b['frenos']}\n\n"
 
-    msg += "💡 <i>Escribe <code>/ficha [nombre]</code> para ver los componentes completos y dónde comprarla.</i>"
+    if total_encontradas > len(bikes_mostradas):
+        msg += f"💡 <i>Hay {total_encontradas - len(bikes_mostradas)} modelos más en stock. Usa filtros como <code>/catalogo S+</code>, <code>/catalogo 1200</code> o <code>/chollazos</code> para afinar.</i>"
+    else:
+        msg += "💡 <i>Escribe <code>/ficha [nombre]</code> para ver componentes completos y dónde comprarla.</i>"
     return msg

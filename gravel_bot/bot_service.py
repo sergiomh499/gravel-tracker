@@ -25,25 +25,79 @@ from gravel_bot.evaluator import calcular_rubrica_personalizada, calcular_talla_
 from gravel_bot.validator import run_full_catalog_validation
 from gravel_bot.store_recommender import format_stores_recommendation_message
 from gravel_bot.deal_detector import format_pure_deals_message
-def send_reply(chat_id: int, text: str):
-    """Envía un mensaje de texto formateado en HTML al chat de Telegram."""
+def register_bot_commands():
+    """Registra el menú de comandos oficial de Telegram para autocompletar."""
     if not TELEGRAM_BOT_TOKEN:
         return
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True
-    }
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    commands = [
+        {"command": "ranking", "description": "🏆 Podio y Tier List para tu fisionomía"},
+        {"command": "catalogo", "description": "🚲 Ver gravels en stock (ej: /catalogo S+)"},
+        {"command": "chollazos", "description": "💥 Gangas por % descuento (ej: /chollazos 1200)"},
+        {"command": "ficha", "description": "📄 Ficha y dónde comprar (ej: /ficha kalima)"},
+        {"command": "historial", "description": "📈 Evolución de precios (ej: /historial jakar)"},
+        {"command": "tiendas", "description": "📍 Tiendas físicas en Madrid recomendadas"},
+        {"command": "stats", "description": "📊 Estadísticas globales de catálogo y precios"},
+        {"command": "perfil", "description": "👤 Ver tu perfil y tallaje dinámico"},
+        {"command": "altura", "description": "📏 Ajustar tu estatura (ej: /altura 169)"},
+        {"command": "presupuesto", "description": "💰 Ajustar presupuesto (ej: /presupuesto 1000)"},
+        {"command": "holgura", "description": "🎯 Margen para chollos (ej: /holgura 15)"},
+        {"command": "transmision", "description": "⚙️ Preferencia 1x / 2x / indiferente"},
+        {"command": "add", "description": "📥 Analizar bici pegando una URL"},
+        {"command": "help", "description": "ℹ️ Ayuda completa y guía de uso"}
+    ]
     try:
-        with urllib.request.urlopen(req, timeout=10) as res:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
+        data = json.dumps({"commands": commands}).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10):
             pass
     except Exception as e:
-        print(f"❌ Error enviando respuesta Telegram: {e}")
+        print(f"⚠️ No se pudo registrar setMyCommands en Telegram: {e}")
 
+def send_reply(chat_id: int, text: str):
+    """Envía un mensaje formateado a Telegram con auto-chunking seguro (<3800 chars) y fallback a texto plano."""
+    if not TELEGRAM_BOT_TOKEN or not text:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
+    chunks = []
+    if len(text) <= 3800:
+        chunks = [text]
+    else:
+        paragraphs = text.split("\n\n")
+        curr = ""
+        for p in paragraphs:
+            if len(curr) + len(p) + 2 > 3800:
+                if curr:
+                    chunks.append(curr.strip())
+                curr = p + "\n\n"
+            else:
+                curr += p + "\n\n"
+        if curr.strip():
+            chunks.append(curr.strip())
+
+    for chunk in chunks[:4]:
+        payload = {
+            "chat_id": chat_id,
+            "text": chunk,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=10):
+                pass
+        except Exception as e:
+            # Si Telegram rechaza el parseo HTML, reenviar en texto plano
+            try:
+                payload.pop("parse_mode", None)
+                data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=10):
+                    pass
+            except Exception as e2:
+                print(f"❌ Error enviando respuesta Telegram: {e2}")
 def get_profile_for_chat(chat_id: int, username: str = "") -> Dict[str, Any]:
     """Obtiene o inicializa el perfil de ciclista asociado a este chat_id."""
     init_db()
@@ -386,16 +440,30 @@ def _process_message(msg: Dict[str, Any]):
         send_reply(chat_id, res_text)
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/catalogo", "/disponibles", "/bicis", "/stock", "catalogo", "disponibles"]):
         parts = raw_text.split()
-        tier_arg = parts[1] if len(parts) > 1 and "tier" in parts[1].lower() else None
+        tier_arg = None
+        max_p = None
+        brand_arg = None
+        if len(parts) > 1:
+            arg = parts[1].strip()
+            if arg.upper() in ["S+", "S", "A", "B", "C"]:
+                tier_arg = f"Tier {arg.upper()}"
+            elif "tier" in arg.lower():
+                tier_arg = " ".join(parts[1:]).title()
+            elif arg.replace(".", "").isdigit():
+                max_p = float(arg)
+            else:
+                brand_arg = arg
         from gravel_bot.bike_inspector import format_available_bikes_message
-        send_reply(chat_id, format_available_bikes_message(tier=tier_arg))
+        send_reply(chat_id, format_available_bikes_message(tier=tier_arg, max_price=max_p, brand=brand_arg))
 
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/ficha", "/info", "/detalle", "ficha", "info"]):
         parts = raw_text.split(maxsplit=1)
-        query = parts[1] if len(parts) > 1 else "Kalima"
-        from gravel_bot.bike_inspector import format_detailed_bike_card
-        send_reply(chat_id, format_detailed_bike_card(query))
-
+        if len(parts) > 1 and parts[1].strip():
+            query = parts[1].strip()
+            from gravel_bot.bike_inspector import format_detailed_bike_card
+            send_reply(chat_id, format_detailed_bike_card(query))
+        else:
+            send_reply(chat_id, "ℹ️ Escribe el modelo que deseas consultar. Ejemplos:\n • <code>/ficha Kalima</code>\n • <code>/ficha Jakar</code>\n • <code>/ficha Orbea</code>\n • <code>/ficha Esker</code>")
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/add_tienda", "/anadirtienda", "add_tienda"]):
         parts = raw_text.split()
         if len(parts) >= 3:
@@ -466,10 +534,11 @@ def run_bot_polling(duration_seconds: Optional[int] = None):
     port_env = os.environ.get("PORT")
     if port_env and port_env.isdigit():
         threading.Thread(target=_start_cloud_health_server, args=(int(port_env),), daemon=True).start()
+    print("🤖 [BOT POLLING] Registrando autocompletar de comandos en Telegram...")
+    register_bot_commands()
 
     print("🤖 [BOT POLLING] Escuchando comandos en Telegram para @GravelDealSearchBot...")
     start_time = time.time()
-    offset = None
     while True:
         if duration_seconds and (time.time() - start_time) >= duration_seconds:
             print(f"⏱️ [BOT POLLING] Sesión en la nube completada ({duration_seconds}s). Finalizando para persistir datos.")
