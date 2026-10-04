@@ -95,8 +95,14 @@ if __name__ == "__main__":
             run_pipeline(send_alerts=True, verbose=True)
         elif cmd in ["--test-telegram", "test-telegram"]:
             test_telegram_connection()
+        elif cmd in ["--validate", "validate"]:
+            from gravel_bot.validator import run_full_catalog_validation
+            run_full_catalog_validation(auto_repair=True, verbose=True)
         elif cmd in ["--add", "add"]:
             agregar_modelo_cli()
+        elif cmd in ["--bot", "bot"]:
+            from gravel_bot.bot_service import run_bot_polling
+            run_bot_polling()
         elif cmd in ["--daemon", "daemon"]:
             from gravel_bot.cli import cmd_daemon
             cmd_daemon(None)

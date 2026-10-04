@@ -6,6 +6,7 @@ Base: Madrid 50/50 | 1,69 m (Talla S) | Presupuesto flexible ~1.000 € - 1.350 
 import re
 from typing import Dict, Any, Tuple, List
 from gravel_bot.config import RIDER_PROFILE
+from gravel_bot.geometry_sizing import evaluate_size_compatibility_dynamic, get_recommended_size_dynamic
 
 KNOWN_BRANDS = [
     "Megamo", "Orbea", "Conor", "Canyon", "Scott", "Trek", "Merida",
@@ -99,27 +100,13 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     # 6. Patilla UDH
     patilla_udh = 1 if ("udh" in full_text or "sram udh" in full_text or "universal derailleur" in full_text) else 0
 
-    # 7. Compatibilidad de Talla con 1,69 m
-    talla_valida = False
-    marca_lower = marca.lower()
-    talla_sugerida = "S (51 cm)"
-
-    # Marcas que tallan grande: Canyon, Focus
-    if marca_lower in ["canyon", "focus"]:
-        talla_sugerida = "XS (48 cm)"
-        # Compatible solo si tiene XS o 48
-        if any(t in ["xs", "48", "xxs"] for t in sizes_clean):
-            talla_valida = True
-        elif not sizes:
-            # Si no hay tallas especificadas pero el anuncio no fuerza M/L
-            talla_valida = True
-    else:
-        # Marcas estándar (Orbea, Megamo, Conor, MMR, Scott, Trek)
-        if any(t in ["s", "sm", "50", "51", "52", "49"] for t in sizes_clean):
-            talla_valida = True
-        elif not sizes and not any(t in ["m", "l", "xl", "54", "56"] for t in full_text.split()):
-            talla_valida = True
-
+    # 7. Compatibilidad Dinámica de Talla según Marca y Modelo (no global)
+    talla_valida, talla_sugerida, explicacion_talla = evaluate_size_compatibility_dynamic(
+        marca=marca,
+        modelo=title,
+        altura_cm=169,
+        sizes_encontradas=sizes_clean
+    )
     # 8. Cálculo de Rúbrica
     c1, c2, c3, c4, c5, total, nota, tier = calcular_rubrica(
         disciplina=disciplina,
@@ -133,12 +120,7 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     )
 
     # 9. Veredicto sintético
-    veredicto = f"Detectado {marca} con {transmision_desc} y {frenos_desc}. "
-    if talla_valida:
-        veredicto += f"Talla adecuada ({talla_sugerida}) para 1,69m."
-    else:
-        veredicto += "ALERTA: Talla no recomendada para 1,69m."
-
+    veredicto = f"Detectado {marca} con {transmision_desc} y {frenos_desc}. {explicacion_talla}"
     # Generar Slug limpio
     clean_title = re.sub(r'[^a-zA-Z0-9]+', '_', title.lower()).strip('_')[:40]
     slug = f"{clean_title}_{int(price)}"
@@ -251,3 +233,153 @@ def calcular_rubrica(disciplina: str, tipo_frenos: str, tipo_transmision: str,
         tier = "Tier C"
 
     return c1, c2, c3, c4, c5, total, nota, tier
+
+# -----------------------------------------------------------------------------
+# Extensiones Multiusuario y Personalización Dinámica
+# -----------------------------------------------------------------------------
+
+def calcular_talla_desde_estatura(altura_cm: int, marca: str = "") -> str:
+    """
+    Calcula la talla de cuadro recomendada según la estatura en cm,
+    teniendo en cuenta las peculiaridades de marcas que tallan grande (Canyon, Focus).
+    """
+    marca_l = marca.lower()
+    talla_grande = marca_l in ["canyon", "focus"]
+
+    if altura_cm < 165:
+        return "2XS" if talla_grande else "XS"
+    elif 165 <= altura_cm <= 173:
+        return "XS" if talla_grande else "S"
+    elif 174 <= altura_cm <= 181:
+        return "S" if talla_grande else "M"
+    elif 182 <= altura_cm <= 189:
+        return "M" if talla_grande else "L"
+    else:
+        return "L" if talla_grande else "XL"
+
+def calcular_rubrica_personalizada(bike: Dict[str, Any], perfil: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recalcula la puntuación de rúbrica y el Tier de una bicicleta
+    adaptándola específicamente al perfil del ciclista (presupuesto, uso %, estatura/talla).
+    """
+    disciplina = bike.get("disciplina", "gravel")
+    tipo_frenos = bike.get("tipo_frenos", "hidraulico")
+    tipo_trans = bike.get("tipo_transmision", "2x10")
+    cuadro = bike.get("cuadro", "")
+    horquilla = bike.get("horquilla", "")
+    patilla_udh = bike.get("patilla_udh", 0)
+    precio = float(bike.get("precio_oferta", 0.0))
+    marca = bike.get("marca", "")
+
+    # 1. C1: Frenos (25 pts)
+    if tipo_frenos == "hidraulico":
+        c1 = 25.0
+    elif tipo_frenos == "semihidraulico":
+        c1 = 15.0
+    elif tipo_frenos == "mecanico_doble":
+        c1 = 10.0
+    else:
+        c1 = 8.0
+
+    # 2. C2: Transmisión adaptada al perfil (25 pts)
+    asfalto_pct = perfil.get("terreno_asfalto_pct", 50)
+    pref_trans = perfil.get("preferencia_transmision", "2x")
+
+    if asfalto_pct >= 50 or pref_trans == "2x":
+        if tipo_trans in ["2x10", "2x11", "2x12"]:
+            c2 = 25.0
+        elif tipo_trans in ["1x11", "1x12"]:
+            c2 = 18.0
+        elif tipo_trans == "1x10":
+            c2 = 17.0
+        else:
+            c2 = 10.0
+    else:
+        if tipo_trans in ["1x11", "1x12"]:
+            c2 = 25.0
+        elif tipo_trans == "1x10":
+            c2 = 22.0
+        elif tipo_trans in ["2x10", "2x11", "2x12"]:
+            c2 = 20.0
+        else:
+            c2 = 12.0
+
+    # 3. C3: Cuadro y Horquilla (20 pts)
+    es_carb = "carbono" in cuadro.lower()
+    horq_carb = "carbono" in horquilla.lower()
+    if es_carb and horq_carb:
+        c3 = 20.0
+    elif horq_carb:
+        c3 = 20.0 if patilla_udh else 17.0
+    else:
+        c3 = 8.0
+
+    # 4. C4: Precio adaptado al presupuesto con holgura por buena oferta (20 pts)
+    presupuesto = float(perfil.get("presupuesto_max", 1000.0))
+    holgura_pct = float(perfil.get("holgura_max_pct", 15.0))
+    limite_holgura = presupuesto * (1.0 + holgura_pct / 100.0)
+
+    pvp = float(bike.get("precio_pvp", precio))
+    descuento_pct = ((pvp - precio) / pvp * 100.0) if pvp > precio else 0.0
+
+    # Es un chollazo justificado si tiene buen descuento, frenos hidráulicos o grupo GRX
+    es_gran_oferta = (
+        descuento_pct >= 18.0 or
+        bike.get("tipo_frenos") == "hidraulico" or
+        "carbono" in str(bike.get("cuadro", "")).lower() or
+        "grx" in str(bike.get("transmision", "")).lower()
+    )
+
+    holgura_aplicada = False
+    if precio <= (presupuesto * 0.9):
+        c4 = 20.0
+    elif precio <= presupuesto:
+        c4 = 18.0
+    elif precio <= limite_holgura:
+        if es_gran_oferta:
+            c4 = 16.0
+            holgura_aplicada = True
+        else:
+            c4 = 11.0
+    elif precio <= (presupuesto * 1.35):
+        c4 = 7.0
+    else:
+        c4 = 2.0
+    # 5. C5: Talla y Ergonomía Dinámica por Marca y Modelo (10 pts)
+    estatura = perfil.get("estatura_cm", 169)
+    modelo = bike.get("modelo", "")
+    rec = get_recommended_size_dynamic(marca, modelo, estatura)
+    talla_bici_txt = str(bike.get("talla_recomendada_169", "")).lower()
+    
+    # Comprobar coincidencia con tokens admisibles de la marca
+    talla_valida = any(token in talla_bici_txt for token in rec["tokens_admisibles"])
+    if not talla_valida and (rec["talla_recomendada"].lower() in talla_bici_txt):
+        talla_valida = True
+
+    c5 = 10.0 if talla_valida else 2.0
+    total = c1 + c2 + c3 + c4 + c5
+    nota = round(total / 10.0, 1)
+
+    if total >= 90:
+        tier = "Tier S+"
+    elif total >= 80:
+        tier = "Tier S"
+    elif total >= 65:
+        tier = "Tier A"
+    elif total >= 50:
+        tier = "Tier B"
+    else:
+        tier = "Tier C"
+
+    result = dict(bike)
+    result["c1_frenos"] = c1
+    result["c2_transmision"] = c2
+    result["c3_cuadro"] = c3
+    result["c4_precio"] = c4
+    result["c5_talla"] = c5
+    result["puntuacion_total"] = total
+    result["nota"] = nota
+    result["tier"] = tier
+    result["talla_valida"] = talla_valida
+    result["holgura_aplicada"] = holgura_aplicada
+    return result

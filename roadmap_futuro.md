@@ -22,6 +22,11 @@ Fase 3: Infraestructura de Rastreo Avanzado y Segunda Mano
 Fase 4: Motor Biomecánico y Simulador de Desarrollos
        ↳ Cálculo automático de ratio Stack/Reach por talla
        ↳ Simulador de desarrollos (Gear Inches, cadencia a 30 km/h y ratio subida)
+
+Fase 5: Validador Continuo de Enlaces, Stock y Calidad de Datos (Health Engine)
+       ↳ Comprobación periódica de HTTP 200 vs 404 en url_oferta
+       ↳ Detección de cambios de precio en vivo y actualización de historial
+       ↳ Auditoría de integridad de campos técnicos (frenos, transmisión, talla)
 ```
 
 ---
@@ -158,6 +163,28 @@ $$\text{Ratio Mínimo} = \frac{\text{Dientes Plato Pequeño}}{\text{Dientes Coro
 * **$\text{Stack} / \text{Reach} > 1.55$:** Geometría relajada (*Gran Fondo / Resistencia*), posición cómoda, ideal para principiantes y rutas largas.
 * **$\text{Stack} / \text{Reach} < 1.45$:** Geometría de competición agresiva (*Aero Gravel*), mayor tensión en cervicales y espalda.
 
+
+---
+
+## 🩺 Fase 5: Validador Continuo de Enlaces, Stock y Calidad de Fichas
+
+Para evitar enlaces rotos, ofertas expiradas y fichas técnicas incompletas, se añade un motor de auditoría continua (`gravel_bot/validator.py`):
+
+### 5.1 Comprobación de Estado HTTP y Stock en Vivo
+* **Control de 404 / Enlace Expirado:** Realiza peticiones HEAD/GET ligeras a cada `url_oferta`. Si la tienda devuelve `404 Not Found` o redirige a la portada, marca automáticamente `en_stock = 0` para sacarla del ranking activo de ofertas.
+* **Detección de Subida/Bajada de Precio:** Extrae el precio actual de la página. Si el precio ha variado respecto al guardado, actualiza `precio_oferta` y añade un nuevo registro temporal en `historial_precios`.
+* **Marcado de Stock Agotado:** Detecta textos en la página como *"Agotado"*, *"Sin stock"*, *"Out of stock"* o botones de compra deshabilitados.
+
+### 5.2 Validador de Integridad de Campos Técnicos (Spec Auditor)
+Audita que cada bicicleta en la base de datos cumpla la integridad mínima de campos:
+* **Marca y Modelo:** Texto no vacío y normalizado.
+* **Transmisión y Frenos:** Clasificación explícita (`hidraulico`, `mecanico`, `2x10`, etc.).
+* **Talla:** Asignación coherente (`S`, `M`, `L` o `XS`).
+* **Precio y Descuento:** Coherencia matemática ($0 < \text{oferta} \le \text{PVP}$).
+
+### 5.3 Comando de Auditoría
+* Desde CLI: `python3 gravel_tracker.py --validate`
+* Desde Telegram: comando `/validar`
 ---
 
 ## 📅 Calendario de Implementación Recomendado

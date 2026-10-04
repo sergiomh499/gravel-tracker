@@ -105,5 +105,90 @@ class TestGravelBot(unittest.TestCase):
         self.assertIn("Ahorras 849 €", msg)
         self.assertIn("Calmera Atocha", msg)
 
+    def test_dynamic_geometry_sizing_by_brand(self):
+        """Verifica que el tallaje sea dinámico por marca/modelo y no global."""
+        from gravel_bot.geometry_sizing import get_recommended_size_dynamic, evaluate_size_compatibility_dynamic
+        # Canyon: A 1,69 m debe ser XS, nunca S
+        canyon_size = get_recommended_size_dynamic("Canyon", "Grizl", 169)
+        self.assertEqual(canyon_size["talla_recomendada"], "XS")
+        compat, nom, _ = evaluate_size_compatibility_dynamic("Canyon", "Grizl", 169, ["s", "m"])
+        self.assertFalse(compat) # S en Canyon está rechazada para 1,69m
+
+        # Focus: A 1,69 m debe ser XS (48)
+        focus_size = get_recommended_size_dynamic("Focus", "ATLAS", 169)
+        self.assertIn("XS", focus_size["talla_recomendada"])
+
+        # Trek: A 1,69 m debe ser 52 cm
+        trek_size = get_recommended_size_dynamic("Trek", "Checkpoint", 169)
+        self.assertEqual(trek_size["talla_recomendada"], "52 cm")
+
+        # Conor: A 1,69 m debe ser SM
+        conor_size = get_recommended_size_dynamic("Conor", "Kalima", 169)
+        self.assertIn("SM", conor_size["talla_recomendada"])
+
+    def test_multi_user_profile_crud(self):
+        """Verifica la persistencia y actualización de perfiles de usuario en SQLite."""
+        from gravel_bot.db import get_or_create_user, get_user_profile, update_user_profile
+        test_chat_id = 999888777
+        user_id = get_or_create_user(test_chat_id, "test_cyclist")
+        update_user_profile(user_id, estatura_cm=178, presupuesto_max=1800.0, preferencia_transmision="1x")
+        prof = get_user_profile(user_id)
+        self.assertIsNotNone(prof)
+        self.assertEqual(prof["estatura_cm"], 178)
+        self.assertEqual(prof["presupuesto_max"], 1800.0)
+        self.assertEqual(prof["preferencia_transmision"], "1x")
+        self.assertEqual(prof["talla_calculada"], "M")
+
+    def test_bike_record_validator(self):
+        """Verifica la auditoría de campos técnicos y precios coherentes."""
+        from gravel_bot.validator import validate_bike_record
+        bike = {
+            "marca": "Canyon",
+            "modelo": "Grizl 6 AL",
+            "precio_oferta": 1199.0,
+            "precio_pvp": 1499.0,
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x10"
+        }
+        val = validate_bike_record(bike, altura_cm=169)
+        self.assertTrue(val["valid"])
+        self.assertEqual(val["talla_dinamica_calculada"], "XS")
+
+
+    def test_budget_tolerance_stretch_deal(self):
+        """Verifica que ofertas superiores al presupuesto base entren con holgura si están justificadas."""
+        from gravel_bot.evaluator import calcular_rubrica_personalizada
+        perfil = {
+            "estatura_cm": 169,
+            "presupuesto_max": 1000.0,
+            "holgura_max_pct": 15.0, # hasta 1.150 €
+            "preferencia_transmision": "2x",
+            "terreno_asfalto_pct": 50
+        }
+        # Bici de 1.100 € (dentro de holgura) con grupo GRX y frenos hidráulicos
+        bike_gran_oferta = {
+            "marca": "Megamo",
+            "modelo": "Jakar 30 2x10",
+            "precio_oferta": 1100.0,
+            "precio_pvp": 1499.0,
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x10",
+            "cuadro": "Aluminio con horquilla carbono",
+            "talla_recomendada_169": "S (52 cm)",
+            "disciplina": "gravel",
+            "horquilla": "Carbono",
+            "patilla_udh": 0
+        }
+        res = calcular_rubrica_personalizada(bike_gran_oferta, perfil)
+        self.assertTrue(res["holgura_aplicada"])
+        self.assertGreaterEqual(res["c4_precio"], 15.0)
+        self.assertIn(res["tier"], ["Tier S+", "Tier S"])
+
+        # Bici de 1.450 € (fuera de holgura)
+        bike_cara = dict(bike_gran_oferta)
+        bike_cara["precio_oferta"] = 1450.0
+        res_cara = calcular_rubrica_personalizada(bike_cara, perfil)
+        self.assertFalse(res_cara["holgura_aplicada"])
+        self.assertLessEqual(res_cara["c4_precio"], 7.0)
 if __name__ == "__main__":
     unittest.main()

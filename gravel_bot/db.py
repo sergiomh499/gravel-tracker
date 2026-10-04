@@ -97,6 +97,50 @@ def init_db():
     );
     """)
 
+    # Tabla usuarios (multiusuario para Telegram Bot)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telegram_chat_id INTEGER UNIQUE NOT NULL,
+        telegram_username TEXT,
+        fecha_registro TEXT NOT NULL,
+        activo INTEGER DEFAULT 1
+    );
+    """)
+
+    # Tabla perfiles_ciclista (personalización individual)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS perfiles_ciclista (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER UNIQUE REFERENCES usuarios(id),
+        estatura_cm INTEGER NOT NULL DEFAULT 169,
+        talla_calculada TEXT NOT NULL DEFAULT 'S',
+        presupuesto_max REAL NOT NULL DEFAULT 1000.0,
+        holgura_max_pct REAL NOT NULL DEFAULT 15.0, -- % margen extra para chollos excepcionales
+        preferencia_transmision TEXT DEFAULT '2x', -- '2x', '1x', 'indiferente'
+        terreno_asfalto_pct INTEGER DEFAULT 50,    -- 50% asfalto / 50% tierra
+        zona TEXT DEFAULT 'Méndez Álvaro, Madrid',
+        alertas_activas INTEGER DEFAULT 1,
+        nota_minima_alerta REAL DEFAULT 8.5
+    );
+    """)
+    # Migración en caliente de columna holgura si la base ya existe
+    try:
+        c.execute("ALTER TABLE perfiles_ciclista ADD COLUMN holgura_max_pct REAL DEFAULT 15.0")
+    except Exception:
+        pass
+
+    # Tabla alertas_por_usuario (para evitar enviar duplicados al mismo usuario)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS alertas_por_usuario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER REFERENCES usuarios(id),
+        bicicleta_id INTEGER REFERENCES bicicletas(id),
+        precio_notificado REAL NOT NULL,
+        fecha_notificacion TEXT NOT NULL
+    );
+    """)
+
     conn.commit()
     conn.close()
 
@@ -258,4 +302,118 @@ def get_deals(min_discount_pct: float = 15.0) -> List[sqlite3.Row]:
     c.execute(query, (min_discount_pct,))
     rows = c.fetchall()
     conn.close()
+
+# -------------------------------------------------------------
+# Métodos Multiusuario y Perfiles de Ciclista
+# -------------------------------------------------------------
+
+def get_or_create_user(chat_id: int, username: Optional[str] = None) -> int:
+    """Registra o recupera el ID interno de un usuario de Telegram."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT id FROM usuarios WHERE telegram_chat_id = ?", (chat_id,))
+    row = c.fetchone()
+    if row:
+        user_id = row["id"]
+        if username:
+            c.execute("UPDATE usuarios SET telegram_username = ? WHERE id = ?", (username, user_id))
+            conn.commit()
+    else:
+        c.execute("""
+        INSERT INTO usuarios (telegram_chat_id, telegram_username, fecha_registro, activo)
+        VALUES (?, ?, ?, 1)
+        """, (chat_id, username or "", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        user_id = c.lastrowid
+
+        # Crear perfil por defecto (Sergio - Méndez Álvaro, 1,69 m, S, 1350 €, 2x, 50/50)
+        c.execute("""
+        INSERT INTO perfiles_ciclista (
+            usuario_id, estatura_cm, talla_calculada, presupuesto_max,
+            preferencia_transmision, terreno_asfalto_pct, zona, alertas_activas, nota_minima_alerta
+        ) VALUES (?, 169, 'S', 1350.0, '2x', 50, 'Méndez Álvaro, Madrid', 1, 8.5)
+        """, (user_id,))
+        conn.commit()
+
+    conn.close()
+    return user_id
+
+def get_user_profile(chat_id: int) -> Optional[sqlite3.Row]:
+    """Obtiene el perfil de ciclista asociado a un chat_id de Telegram."""
+    user_id = get_or_create_user(chat_id)
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT p.*, u.telegram_chat_id, u.telegram_username
+    FROM perfiles_ciclista p
+    JOIN usuarios u ON p.usuario_id = u.id
+    WHERE u.id = ?
+    """, (user_id,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+def update_user_profile(chat_id: int, **kwargs) -> Optional[sqlite3.Row]:
+    """Actualiza campos específicos del perfil ciclista de un usuario."""
+    user_id = get_or_create_user(chat_id)
+    if "estatura_cm" in kwargs and "talla_calculada" not in kwargs:
+        from gravel_bot.evaluator import calcular_talla_desde_estatura
+        kwargs["talla_calculada"] = calcular_talla_desde_estatura(kwargs["estatura_cm"])
+    allowed_fields = [
+        "estatura_cm", "talla_calculada", "presupuesto_max", "holgura_max_pct",
+        "preferencia_transmision", "terreno_asfalto_pct", "zona",
+        "alertas_activas", "nota_minima_alerta"
+    ]
+    updates = []
+    params = []
+    for k, v in kwargs.items():
+            updates.append(f"{k} = ?")
+            params.append(v)
+
+    if not updates:
+        return get_user_profile(chat_id)
+
+    params.append(user_id)
+    conn = get_connection()
+    c = conn.cursor()
+    query = f"UPDATE perfiles_ciclista SET {', '.join(updates)} WHERE usuario_id = ?"
+    c.execute(query, params)
+    conn.commit()
+    conn.close()
+    return get_user_profile(chat_id)
+
+def get_all_active_profiles() -> List[sqlite3.Row]:
+    """Devuelve todos los perfiles de usuarios con alertas activas para el pipeline de escaneo."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT p.*, u.telegram_chat_id, u.telegram_username
+    FROM perfiles_ciclista p
+    JOIN usuarios u ON p.usuario_id = u.id
+    WHERE u.activo = 1 AND p.alertas_activas = 1
+    """)
+    rows = c.fetchall()
+    conn.close()
     return rows
+
+def was_alert_sent_to_user(usuario_id: int, bike_id: int, current_price: float) -> bool:
+    """Comprueba si un usuario concreto ya fue notificado de una oferta a este precio o menor."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT precio_notificado FROM alertas_por_usuario
+    WHERE usuario_id = ? AND bicicleta_id = ? AND precio_notificado <= ?
+    """, (usuario_id, bike_id, current_price))
+    row = c.fetchone()
+    conn.close()
+    return row is not None
+
+def mark_alert_sent_to_user(usuario_id: int, bike_id: int, price: float):
+    """Registra que una alerta ya ha sido entregada a un usuario específico."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO alertas_por_usuario (usuario_id, bicicleta_id, precio_notificado, fecha_notificacion)
+    VALUES (?, ?, ?, ?)
+    """, (usuario_id, bike_id, price, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
