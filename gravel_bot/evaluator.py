@@ -35,7 +35,9 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
 
     # 2. Disciplina
     disciplina = "gravel"
-    if "ebike" in full_text or "eléctrica" in full_text or "e-bike" in full_text:
+    if marca.lower() in ["testbrand", "test"] or title.lower().startswith("test "):
+        disciplina = "test_artifact"
+    elif "ebike" in full_text or "eléctrica" in full_text or "e-bike" in full_text:
         disciplina = "ebike_gravel"
     elif "junior" in full_text or "niño" in full_text:
         disciplina = "junior"

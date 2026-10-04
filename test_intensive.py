@@ -120,6 +120,14 @@ class TestDatabaseLayer(unittest.TestCase):
         self.assertEqual(len(test_deal), 1)
         self.assertGreaterEqual(test_deal[0]["descuento_pct"], 30.0)
 
+        # Limpieza inmediata de datos de test
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM historial_precios WHERE bicicleta_id = ?", (bike_id,))
+        c.execute("DELETE FROM bicicletas WHERE id = ?", (bike_id,))
+        conn.commit()
+        conn.close()
+
     def test_user_profile_lifecycle(self):
         """Verifica la gestión del perfil de ciclista y cálculo dinámico de talla base."""
         chat_id = 123456789
