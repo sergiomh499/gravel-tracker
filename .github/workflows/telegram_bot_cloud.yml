@@ -1,0 +1,44 @@
+name: Telegram Bot Cloud Service
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Se ejecuta periódicamente en GitHub Actions para procesar la cola de mensajes
+    - cron: '*/30 * * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  run-bot-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Descargar Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ejecutar Bot de Telegram en GitHub Cloud
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Escucha y procesa comandos de usuarios en la nube de GitHub durante 25 minutos
+          python3 gravel_tracker.py --bot 1500
+
+      - name: Sincronizar Base de Datos en GitHub
+        run: |
+          git config user.name "Gravel Bot Cloud"
+          git config user.email "bot-cloud@gravel.local"
+          git add gravel_madrid.db
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-sync: base de datos actualizada por el bot en GitHub [skip ci]"
+            git push
+          else
+            echo "Sin cambios en la base de datos tras la sesión."
+          fi

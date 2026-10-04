@@ -195,29 +195,55 @@ def _process_message(msg: Dict[str, Any]):
 
     print(f"📩 [TELEGRAM] Mensaje de @{username} ({chat_id}): '{raw_text}'")
 
-    if text in ["/start", "/help", "hola", "menu"]:
+    if text in ["/start", "start"]:
+        prof = get_profile_for_chat(chat_id, username)
+        h = prof["estatura_cm"]
+        bud = int(prof["presupuesto_max"])
+        holgura = int(prof.get("holgura_max_pct", 15.0))
+        tope = int(bud * (1.0 + holgura / 100.0))
+
         welcome = (
-            "👋 <b>¡Hola! Soy tu Gravel Deals Bot de Madrid</b> 🚲\n\n"
-            "Calculo la talla exacta <b>según la marca y modelo</b> y puntúo las mejores ofertas para tu presupuesto.\n\n"
-            "📌 <b>Comandos de Consulta y Fichas:</b>\n"
-            " • <b>/ranking</b>: Tier list personalizado a tu fisionomía.\n"
-            " • <b>/catalogo</b>: Ver todas las bicicletas disponibles en stock.\n"
-            " • <code>/ficha [modelo]</code>: Ficha técnica detallada, componentes y dónde comprarla.\n"
-            " • <code>/historial [modelo]</code>: Evolución y fluctuaciones de precios.\n"
-            " • <code>/chollazos [máx €]</code>: Gangas por % de descuento (ej: <code>/chollazos 1200</code>).\n"
-            " • <b>/tiendas</b>: Recomendador de tiendas físicas a visitar en Madrid.\n"
-            " • <b>/stats</b>: Estadísticas globales de catálogo y precios.\n"
-            " • <code>/add [URL]</code>: Ingestar una nueva bici desde cualquier enlace web.\n"
-            " • <code>/add_tienda [Nombre] [URL]</code>: Registrar una nueva tienda.\n\n"
-            "⚙️ <b>Personalización de tu Perfil:</b>\n"
-            " • <b>/perfil</b>: Ver tu configuración y tallas por marca.\n"
+            "🎉 <b>¡BIENVENIDO A TU GRAVEL ASSISTANT EN MADRID!</b> 🚲\n\n"
+            "He configurado automáticamente tu <b>Perfil de Ciclista</b> para cazar la gravel ideal:\n"
+            f" • 📏 <b>Estatura:</b> <code>{h} cm</code> (Talla base calculada: <b>{prof['talla_calculada']}</b>)\n"
+            f" • 💰 <b>Presupuesto Objetivo:</b> <code>{bud} €</code> (Hasta <b>{tope} €</b> con holgura para chollazos)\n"
+            f" • 📍 <b>Ubicación:</b> Méndez Álvaro / Madrid Río (Prioridad tiendas físicas cercanas)\n"
+            f" • 🧭 <b>Uso:</b> 50% Asfalto / 50% Pista y Tierra\n\n"
+            "🧠 <b>¿CÓMO TE AYUDO A ELEGIR?</b>\n"
+            "1. <b>Tallaje Biomecánico Dinámico:</b> Cada fabricante talla diferente. Calculo tu talla exacta según la geometría real (ej. Canyon XS, Focus 48, Conor SM, Megamo S, Trek 52).\n"
+            "2. <b>Rastreo Multi-Tienda en Madrid y Online:</b> Monitorizo 14 tiendas físicas y outlets (Sanferbike M-30, Calmera Atocha, Fabregues, Mammoth, Chollometro...).\n"
+            "3. <b>Historial de Precios:</b> Registro caídas y subidas de precio para detectar auténticas gangas.\n\n"
+            "📌 <b>COMANDOS PRINCIPALES:</b>\n"
+            " • 🏆 <b>/ranking</b>: Tu Podio y Tier List personalizado a tus 169 cm y presupuesto.\n"
+            " • 🚲 <b>/catalogo</b>: Ver todas las bicicletas disponibles en stock actualmente.\n"
+            " • 📄 <code>/ficha [modelo]</code>: Ficha técnica con componentes, dónde comprarla y distancia (ej: <code>/ficha Kalima</code> o <code>/ficha Jakar</code>).\n"
+            " • 💥 <code>/chollazos [máx €]</code>: Gangas ordenadas por % de descuento (ej: <code>/chollazos 1200</code> o <code>/chollazos 30%</code>).\n"
+            " • 📍 <b>/tiendas</b>: Tiendas físicas recomendadas para ver y probar talla desde Méndez Álvaro.\n"
+            " • 📈 <code>/historial [modelo]</code>: Evolución histórica de precios de un modelo.\n"
+            " • 📊 <b>/stats</b>: Estadísticas globales del catálogo y tiendas.\n"
+            " • 📥 <code>/add [URL]</code>: Pega cualquier enlace de una bici para analizarla al instante.\n\n"
+            "⚙️ <b>PERSONALIZACIÓN DE TU PERFIL:</b>\n"
             " • <code>/altura 172</code>: Ajustar tu estatura exacta en cm.\n"
-            " • <code>/presupuesto 1000</code>: Ajustar tu presupuesto base.\n"
-            " • <code>/holgura 15</code>: Margen extra % admisible si la oferta es excelente.\n"
-            " • <code>/transmision 2x</code>: Ajustar preferencia (1x / 2x)."
+            " • <code>/presupuesto 1200</code>: Ajustar tu presupuesto base.\n"
+            " • <code>/holgura 20</code>: Margen extra % admisible en grandes ofertas.\n\n"
+            "🚀 <b>¿Por dónde empezar?</b> Escribe <b>/ranking</b> para ver tus mejores opciones o <b>/ficha Kalima</b>."
         )
         send_reply(chat_id, welcome)
 
+    elif text in ["/help", "help", "ayuda", "menu"]:
+        help_msg = (
+            "🚲 <b>GRAVEL BOT - GUÍA RÁPIDA DE COMANDOS</b> 🚲\n\n"
+            "🏆 <b>/ranking</b>: Ver tu Tier List personalizado.\n"
+            "🚲 <b>/catalogo</b>: Ver todas las bicis disponibles en stock.\n"
+            "📄 <code>/ficha [modelo]</code>: Ficha técnica, componentes y dónde comprarla.\n"
+            "💥 <code>/chollazos [máx €]</code>: Gangas ordenadas por % de descuento.\n"
+            "📍 <b>/tiendas</b>: Tiendas físicas recomendadas en Madrid.\n"
+            "📈 <code>/historial [modelo]</code>: Evolución histórica de precios.\n"
+            "📊 <b>/stats</b>: Estadísticas del catálogo.\n"
+            "📥 <code>/add [URL]</code>: Ingestar una nueva bici desde un enlace web.\n"
+            "👤 <b>/perfil</b>: Ver o editar tu estatura y presupuesto."
+        )
+        send_reply(chat_id, help_msg)
     elif text in ["/perfil", "/profile", "perfil", "mi perfil"]:
         send_reply(chat_id, format_profile_message(chat_id, username))
 
@@ -406,17 +432,19 @@ def handle_incoming_message(msg: Dict[str, Any]):
         if chat_id:
             send_reply(chat_id, f"⚠️ Error al procesar tu solicitud: {e}")
 
-def run_bot_polling():
-    """Bucle infinito de escucha de mensajes en Telegram con long-polling."""
+def run_bot_polling(duration_seconds: Optional[int] = None):
+    """Bucle de escucha de mensajes en Telegram con long-polling y soporte para ejecución acotada en GitHub Actions."""
     if not TELEGRAM_BOT_TOKEN:
         print("❌ TELEGRAM_BOT_TOKEN no configurado.")
         return
 
     print("🤖 [BOT POLLING] Escuchando comandos en Telegram para @GravelDealSearchBot...")
-    print("Prueba enviando /perfil, /ranking o /deals desde tu Telegram.")
-
+    start_time = time.time()
     offset = None
     while True:
+        if duration_seconds and (time.time() - start_time) >= duration_seconds:
+            print(f"⏱️ [BOT POLLING] Sesión en la nube completada ({duration_seconds}s). Finalizando para persistir datos.")
+            break
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates?timeout=25"
         if offset:
             url += f"&offset={offset}"

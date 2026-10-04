@@ -154,7 +154,8 @@ if __name__ == "__main__":
             agregar_modelo_cli()
         elif cmd in ["--bot", "bot"]:
             from gravel_bot.bot_service import run_bot_polling
-            run_bot_polling()
+            dur = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
+            run_bot_polling(duration_seconds=dur)
         elif cmd in ["--daemon", "daemon"]:
             from gravel_bot.cli import cmd_daemon
             cmd_daemon(None)
