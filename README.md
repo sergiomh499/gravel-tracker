@@ -31,8 +31,12 @@ El sistema de decisión y auditoría técnica está estructurado en 5 documentos
 
 5. **[Historial de Precios y Seguimiento de Ofertas (`historial_precios.md`)](./historial_precios.md):**
    * Tabla comparativa con PVP original, precio de oferta actual, porcentaje de rebaja, talla del anuncio y estado de stock en tiempo real.
-   * Detección de ofertas trampa (tallas erróneas o disciplinas cambiadas).
 
+6. **[Hoja de Ruta y Planes Futuros (`roadmap_futuro.md`)](./roadmap_futuro.md):**
+   * Propuestas de arquitectura para soporte multiusuario interactivo vía Telegram (`/perfil`).
+   * Base de conocimiento dinámica de nuevos componentes (GRX 12v, CUES Drop-Bar, SRAM Transmission).
+   * Superación de bloqueos Cloudflare (Playwright/Crawl4AI) e integración con Wallapop y segunda mano.
+   * Simulador biomecánico de desarrollos (Gear Inches, Stack/Reach).
 ---
 
 ## ⚠️ Advertencia Crítica de Disciplina: Orbea Terra vs Orbea Avant
