@@ -1,11 +1,14 @@
 name: Gravel Deals Auto-Scanner
 
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   schedule:
-    # Se ejecuta una vez al día a las 08:00 UTC (09:00/10:00 hora España)
+    # Se ejecuta todos los días a las 08:00 UTC (09:00/10:00 hora España)
     - cron: '0 8 * * *'
-  workflow_dispatch: # Permite ejecución manual desde GitHub
-
+  workflow_dispatch: # Permite ejecución manual desde GitHub Actions
 # Permisos para que el action pueda guardar la base de datos actualizada
 permissions:
   contents: write
@@ -23,14 +26,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Ejecutar Rastreo y Enviar Alertas a Telegram
+      - name: Ejecutar Batería de Tests Unitarios e Integrados
+        run: |
+          python3 test_intensive.py
+          python3 test_bot.py
+
+      - name: Validar Catálogo y Sincronización
+        run: |
+          python3 gravel_tracker.py --validate
+
+      - name: Ejecutar Rastreo y Enviar Alertas a Telegram (Sólo en Cron o Dispatch)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python3 gravel_tracker.py --scan
 
-      - name: Persistir Base de Datos Actualizada
+      - name: Persistir Base de Datos Actualizada (Sólo en Cron o Dispatch)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "Gravel Bot"
           git config user.email "bot@gravel.local"

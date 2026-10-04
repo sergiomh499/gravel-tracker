@@ -412,10 +412,13 @@ def run_bot_polling():
             req = urllib.request.Request(url)
             with urllib.request.urlopen(req, timeout=30) as res:
                 data = json.loads(res.read().decode("utf-8"))
-                for update in data.get("result", []):
+                updates = data.get("result", [])
+                for update in updates:
                     offset = update["update_id"] + 1
                     msg = update.get("message")
                     if msg:
                         handle_incoming_message(msg)
+                if not updates:
+                    time.sleep(1)
         except Exception as e:
             time.sleep(2)
