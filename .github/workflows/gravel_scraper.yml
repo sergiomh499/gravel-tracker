@@ -2,8 +2,8 @@ name: Gravel Deals Auto-Scanner
 
 on:
   schedule:
-    # Se ejecuta al minuto 0 de cada hora
-    - cron: '0 * * * *'
+    # Se ejecuta una vez al día a las 08:00 UTC (09:00/10:00 hora España)
+    - cron: '0 8 * * *'
   workflow_dispatch: # Permite ejecución manual desde GitHub
 
 # Permisos para que el action pueda guardar la base de datos actualizada
