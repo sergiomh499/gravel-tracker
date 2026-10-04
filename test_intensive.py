@@ -422,5 +422,37 @@ class TestAntiBanEngine(unittest.TestCase):
         self.assertFalse(ResilientSession.is_in_cooldown(domain))
         ResilientSession.set_cooldown(domain, seconds=60.0)
         self.assertTrue(ResilientSession.is_in_cooldown(domain))
+
+class TestStoreRecommender(unittest.TestCase):
+    """Pruebas del recomendador de tiendas físicas en Madrid."""
+
+    def test_proximity_ranking(self):
+        """Verifica que Sanferbike M-30 sea la tienda #1 en proximidad (< 1 km)."""
+        from gravel_bot.store_recommender import get_recommended_physical_stores, format_stores_recommendation_message
+        stores = get_recommended_physical_stores()
+        self.assertGreaterEqual(len(stores), 3)
+        self.assertEqual(stores[0]["nombre"], "Sanferbike M-30")
+        self.assertLess(stores[0]["distancia_km"], 1.0)
+
+        # Verificar mensaje formateado
+        msg = format_stores_recommendation_message()
+        self.assertIn("TIENDAS FÍSICAS RECOMENDADAS", msg)
+        self.assertIn("Sanferbike M-30", msg)
+        self.assertIn("Calmera Ciclismo", msg)
+
+class TestPureDealDetector(unittest.TestCase):
+    """Pruebas sobre el detector puro de gangas por diferencia de precio."""
+
+    def test_pure_deals_sorting(self):
+        """Verifica que las ofertas se ordenen por ahorro económico real."""
+        from gravel_bot.deal_detector import get_pure_deals, format_pure_deals_message
+        deals = get_pure_deals(sort_by="ahorro_eur", limit=5)
+        if deals:
+            for d in deals:
+                self.assertGreater(d["ahorro_eur"], 0.0)
+                self.assertGreater(d["descuento_pct"], 0.0)
+
+        msg = format_pure_deals_message()
+        self.assertIn("DETECTOR DE GANGAS", msg)
 if __name__ == "__main__":
     unittest.main()

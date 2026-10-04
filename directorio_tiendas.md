@@ -110,3 +110,28 @@
 | **12GOBiking** | Outlet de Benelux con stock en Europa | Cube Nuroad One / Pro | [12gobiking.nl](https://www.12gobiking.nl) |
 | **Ciclo-Mania** | Especialistas en marcas nacionales | Conor Kalima | [ciclo-mania.com](https://ciclo-mania.com) |
 | **Bicispasaje** | Outlet nacional con entrega rápida | Megamo, MMR, Focus | [bicispasaje.es](https://www.bicispasaje.es) |
+| **Biciescapa Outlet** | Cadena de ciclismo con sección outlet agresiva | Orbea Terra, Cube, Megamo, Scott | [biciescapa.com](https://www.biciescapa.com) |
+| **Bikeinn (Tradeinn)** | Macro-portal deportivo con liquidaciones de stock | Gravel GRX, componentes, cubiertas | [tradeinn.com/bikeinn](https://www.tradeinn.com/bikeinn) |
+| **Bicimarket Outlet** | Red de outlet nacional con puntos de recogida en Madrid | Conor, Merida, BH, Ghost | [bicimarket.com](https://www.bicimarket.com) |
+| **Mantel Outlet** | Distribuidor europeo con entregas en 48-72h | Trek Checkpoint, Cube Nuroad, Cannondale | [mantel.com/es](https://www.mantel.com/es) |
+
+---
+
+## 4. Recomendador de Tiendas Físicas a Visitar (Méndez Álvaro, Madrid)
+
+Para probar la talla exacta en persona o negociar precios con el presupuesto de ~1.000 €:
+
+1. **Sanferbike M-30 (800 m - 8 min a pie):**
+   * **Misión:** Ir a ver y tocar la **Megamo Jakar 30** (talla S - 52) y la **Orbea Terra H40**.
+   * **Truco:** Subir a la 2ª planta (zona Outlet/Test Bikes) y pedir que igualen oferta online o incluyan pedales/tubelizado.
+
+2. **Calmera Ciclismo (Atocha 98 - 2,2 km / 3 min Cercanías):**
+   * **Misión:** Preguntar disponibilidad y precio de la **Conor Kalima GRX400** en talla SM.
+   * **Truco:** Negociación abierta en mano y financiación 0% en tienda.
+
+3. **Decathlon Usera / Madrid Río (2,1 km a pie/bici):**
+   * **Misión:** Subirte a la **Triban GRVL 520 Subcompact** para verificar postura y sensaciones.
+   * **Truco:** Revisar la esquina de *Segunda Vida* al fondo de la tienda para devoluciones con -25% de rebaja.
+
+4. **Buhobike (Moratalaz / C/ Murcia - 3,4 km):**
+   * **Misión:** Consultar su almacén central de liquidaciones de temporadas anteriores de Megamo, Orbea y KTM.

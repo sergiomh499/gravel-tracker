@@ -91,6 +91,12 @@ if __name__ == "__main__":
             listar_ranking(filtro_tier=tier_arg)
         elif cmd in ["--deals", "deals"]:
             buscar_gangas()
+        elif cmd in ["--pure-deals", "pure-deals", "--chollos"]:
+            from gravel_bot.deal_detector import format_pure_deals_message
+            print(format_pure_deals_message())
+        elif cmd in ["--tiendas", "tiendas", "--stores"]:
+            from gravel_bot.store_recommender import format_stores_recommendation_message
+            print(format_stores_recommendation_message())
         elif cmd in ["--scan", "scan"]:
             run_pipeline(send_alerts=True, verbose=True)
         elif cmd in ["--test-telegram", "test-telegram"]:

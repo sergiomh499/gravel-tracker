@@ -18,7 +18,8 @@ from gravel_bot.pipeline import run_pipeline
 from gravel_bot.geometry_sizing import get_recommended_size_dynamic
 from gravel_bot.evaluator import calcular_rubrica_personalizada, calcular_talla_desde_estatura
 from gravel_bot.validator import run_full_catalog_validation
-
+from gravel_bot.store_recommender import format_stores_recommendation_message
+from gravel_bot.deal_detector import format_pure_deals_message
 def send_reply(chat_id: int, text: str):
     """Envía un mensaje de texto formateado en HTML al chat de Telegram."""
     if not TELEGRAM_BOT_TOKEN:
@@ -199,9 +200,11 @@ def handle_incoming_message(msg: Dict[str, Any]):
             "Calculo la talla exacta <b>según la marca y modelo</b> y puntúo las mejores ofertas para tu presupuesto.\n\n"
             "📌 <b>Comandos de Consulta:</b>\n"
             " • <b>/ranking</b>: Tier list personalizado a tu fisionomía.\n"
-            " • <b>/deals</b>: Mayores gangas y descuentos actuales.\n"
+            " • <b>/chollazos</b>: Detector de gangas puras por ahorro económico (€ y %).\n"
+            " • <b>/tiendas</b>: Recomendador de tiendas físicas a visitar en Madrid.\n"
+            " • <b>/deals</b>: Ofertas de catálogo.\n"
             " • <b>/top</b>: Compras Maestras (Tier S+).\n"
-            " • <b>/scan</b>: Rastreo en vivo de las 12 tiendas web.\n"
+            " • <b>/scan</b>: Rastreo en vivo de tiendas y outlets.\n"
             " • <b>/validar</b>: Validador automático de enlaces, stock y tallas.\n"
             " • <b>/stats</b>: Estado de la base de datos.\n\n"
             "⚙️ <b>Personalización de tu Perfil:</b>\n"
@@ -291,6 +294,11 @@ def handle_incoming_message(msg: Dict[str, Any]):
     elif text in ["/deals", "/gangas", "/chollos", "deals", "ofertas"]:
         send_reply(chat_id, format_deals_message(chat_id))
 
+    elif text in ["/chollazos", "/gangaspuras", "/descuentos", "chollazos", "descuentos"]:
+        send_reply(chat_id, format_pure_deals_message(sort_by="ahorro_eur"))
+
+    elif text in ["/tiendas", "/tiendasfisicas", "/dondeir", "tiendas", "ruta"]:
+        send_reply(chat_id, format_stores_recommendation_message())
     elif text in ["/top", "/splus", "top", "s+"]:
         init_db()
         prof = get_profile_for_chat(chat_id, username)
