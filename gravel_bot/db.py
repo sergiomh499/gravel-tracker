@@ -177,14 +177,30 @@ def get_bike_by_slug(slug: str) -> Optional[sqlite3.Row]:
     conn.close()
     return row
 
+def clean_model_name(marca: str, modelo: str) -> str:
+    """Limpia 'Bicicleta', repeticiones de marca y espacios redundantes del nombre de modelo."""
+    import re
+    m = modelo.strip()
+    m = re.sub(r'^(bicicleta\s+el[eé]ctrica|bicicleta\s+de\s+gravel|bicicleta)\s+', '', m, flags=re.IGNORECASE)
+    marca_pattern = r'^' + re.escape(marca.strip()) + r'\s+'
+    m = re.sub(marca_pattern, '', m, flags=re.IGNORECASE)
+    m = re.sub(marca_pattern, '', m, flags=re.IGNORECASE)
+    return re.sub(r'\s+', ' ', m).strip()
+
 def upsert_bike(b: Dict[str, Any]) -> int:
-    """Inserta o actualiza una bicicleta en la base de datos."""
+    """Inserta o actualiza una bicicleta en la base de datos garantizando deduplicación estricta."""
     conn = get_connection()
     c = conn.cursor()
 
-    c.execute("SELECT id, precio_oferta FROM bicicletas WHERE slug = ?", (b["slug"],))
-    existing = c.fetchone()
+    clean_mod = clean_model_name(b["marca"], b["modelo"])
+    b["modelo"] = clean_mod
 
+    # Buscar coincidencia exacta por slug O por combinación (marca, modelo limpio)
+    c.execute("""
+        SELECT id, precio_oferta FROM bicicletas 
+        WHERE slug = ? OR (LOWER(marca) = LOWER(?) AND LOWER(modelo) = LOWER(?))
+    """, (b["slug"], b["marca"], clean_mod))
+    existing = c.fetchone()
     if existing:
         bike_id = existing["id"]
         c.execute("""

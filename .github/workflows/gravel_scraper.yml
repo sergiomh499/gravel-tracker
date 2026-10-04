@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    # Se ejecuta todos los días a las 08:00 UTC (09:00/10:00 hora España)
-    - cron: '0 8 * * *'
-  workflow_dispatch: # Permite ejecución manual desde GitHub Actions
+    # Se ejecuta todos los días a las 08:00 AM hora peninsular española (Madrid)
+    # 06:00 UTC en horario de verano (CEST, UTC+2) y 07:00 UTC en horario de invierno (CET, UTC+1)
+    - cron: '0 6 * * *'
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Permite ejecución manual bajo demanda desde GitHub
 # Permisos para que el action pueda guardar la base de datos actualizada
 permissions:
   contents: write

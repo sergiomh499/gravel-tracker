@@ -6,6 +6,7 @@ cálculo dinámico de talla por fabricante y validación automática de enlaces 
 from __future__ import annotations
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 import json
 import threading
@@ -525,6 +526,27 @@ def _start_cloud_health_server(port: int):
     except Exception as e:
         print(f"⚠️ [CLOUD HEALTH] No se pudo iniciar en puerto {port}: {e}")
 
+def _daily_morning_scanner():
+    """Ejecuta una búsqueda de ofertas todos los días a las 08:00 AM (hora Madrid) incluyendo Wallapop."""
+    while True:
+        try:
+            now = datetime.now()
+            target = now.replace(hour=8, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            wait_seconds = (target - now).total_seconds()
+            hours = int(wait_seconds // 3600)
+            mins = int((wait_seconds % 3600) // 60)
+            print(f"⏰ [SCHEDULER] Próximo escaneo matutino programado en {hours}h {mins}m.")
+            time.sleep(wait_seconds)
+
+            print("🌅 [SCHEDULER] Iniciando escaneo matutino de tiendas y Wallapop...")
+            from gravel_bot.pipeline import run_pipeline
+            run_pipeline(send_alerts=True, verbose=True)
+        except Exception as e:
+            print(f"⚠️ Error en scheduler matutino: {e}")
+            time.sleep(300)
+
 def run_bot_polling(duration_seconds: Optional[int] = None):
     """Bucle de escucha de mensajes en Telegram con long-polling y soporte para ejecución acotada o continua en la nube."""
     if not TELEGRAM_BOT_TOKEN:
@@ -534,9 +556,12 @@ def run_bot_polling(duration_seconds: Optional[int] = None):
     port_env = os.environ.get("PORT")
     if port_env and port_env.isdigit():
         threading.Thread(target=_start_cloud_health_server, args=(int(port_env),), daemon=True).start()
+
+    # Iniciar programador matutino de búsqueda diaria a las 08:00 AM
+    threading.Thread(target=_daily_morning_scanner, daemon=True).start()
+
     print("🤖 [BOT POLLING] Registrando autocompletar de comandos en Telegram...")
     register_bot_commands()
-
     print("🤖 [BOT POLLING] Escuchando comandos en Telegram para @GravelDealSearchBot...")
     start_time = time.time()
     offset = None
