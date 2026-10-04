@@ -392,5 +392,35 @@ class TestTelegramBotFormatting(unittest.TestCase):
         msg = format_deals_message()
         self.assertIn("MAYORES GANGAS", msg)
 
+
+class TestAntiBanEngine(unittest.TestCase):
+    """Pruebas sobre el motor de evasión de bloqueos, perfiles de navegador y retos CAPTCHA."""
+
+    def test_browser_profiles_integrity(self):
+        """Verifica que todos los perfiles de navegación tengan cabeceras válidas y coherentes."""
+        from gravel_bot.anti_ban import BROWSER_PROFILES
+        self.assertGreaterEqual(len(BROWSER_PROFILES), 3)
+        for prof in BROWSER_PROFILES:
+            headers = prof["headers"]
+            self.assertIn("User-Agent", headers)
+            self.assertIn("Accept", headers)
+            self.assertTrue(headers["User-Agent"].startswith("Mozilla/5.0"))
+
+    def test_challenge_detection(self):
+        """Verifica la detección de retos Cloudflare Turnstile y CAPTCHA."""
+        from gravel_bot.anti_ban import ResilientSession
+        cf_html = "<html><head><title>Just a moment...</title></head><body><div id='cf-chl-widget'>Ray ID: 88923a</div></body></html>"
+        self.assertTrue(ResilientSession.detect_anti_bot_challenge(cf_html, 403))
+        self.assertTrue(ResilientSession.detect_anti_bot_challenge("Please complete the recaptcha to continue", 503))
+        # HTML limpio no debe ser detectado
+        self.assertFalse(ResilientSession.detect_anti_bot_challenge("<html><body><h1>Megamo Jakar</h1></body></html>", 200))
+
+    def test_domain_cooldown_activation(self):
+        """Verifica que la activación de enfriamiento impida peticiones repetidas al mismo dominio."""
+        from gravel_bot.anti_ban import ResilientSession
+        domain = "test-protected-shop.com"
+        self.assertFalse(ResilientSession.is_in_cooldown(domain))
+        ResilientSession.set_cooldown(domain, seconds=60.0)
+        self.assertTrue(ResilientSession.is_in_cooldown(domain))
 if __name__ == "__main__":
     unittest.main()

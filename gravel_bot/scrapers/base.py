@@ -4,10 +4,8 @@ gravel_bot.scrapers.base - Clase Base para Scrapers de Tiendas de Ciclismo
 
 import re
 import html
-import urllib.request
-import urllib.error
 from typing import List, Dict, Any, Optional
-from gravel_bot.config import DEFAULT_HEADERS
+from gravel_bot.anti_ban import ResilientSession
 
 class BaseScraper:
     name: str = "base"
@@ -17,17 +15,18 @@ class BaseScraper:
     base_url: str = ""
 
     def fetch_html(self, url: str, timeout: int = 12) -> Optional[str]:
-        """Descarga el contenido HTML de una página web con headers estándar."""
-        req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as res:
-                return res.read().decode("utf-8", errors="ignore")
-        except urllib.error.HTTPError as e:
-            print(f"⚠️ [{self.name}] Error HTTP {e.code} en {url}")
+        """
+        Descarga el contenido HTML utilizando el motor resiliente anti-ban:
+        rotación de perfiles de navegador, rate limiting adaptativo y persistencia de cookies.
+        """
+        html_text, status, meta = ResilientSession.fetch(url, timeout=timeout)
+        if not html_text:
+            err = meta.get("error", "desconocido")
+            reason = meta.get("reason", "")
+            if err != "network_exception":
+                print(f"⚠️ [{self.name}] Petición no completada a {url} (Status {status}, Motivo: {err} {reason})")
             return None
-        except Exception as e:
-            print(f"⚠️ [{self.name}] Error de conexión en {url}: {e}")
-            return None
+        return html_text
 
     @staticmethod
     def clean_price(text: str) -> float:
