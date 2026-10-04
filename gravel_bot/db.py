@@ -302,7 +302,7 @@ def get_deals(min_discount_pct: float = 15.0) -> List[sqlite3.Row]:
     c.execute(query, (min_discount_pct,))
     rows = c.fetchall()
     conn.close()
-
+    return rows
 # -------------------------------------------------------------
 # Métodos Multiusuario y Perfiles de Ciclista
 # -------------------------------------------------------------

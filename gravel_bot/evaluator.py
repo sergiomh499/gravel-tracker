@@ -4,9 +4,11 @@ Base: Madrid 50/50 | 1,69 m (Talla S) | Presupuesto flexible ~1.000 € - 1.350 
 """
 
 import re
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 from gravel_bot.config import RIDER_PROFILE
 from gravel_bot.geometry_sizing import evaluate_size_compatibility_dynamic, get_recommended_size_dynamic
+from gravel_bot.knowledge_base import KnowledgeBase
+from gravel_bot.biomechanics import evaluate_drivetrain_biomechanics, classify_geometry_aggressiveness
 
 KNOWN_BRANDS = [
     "Megamo", "Orbea", "Conor", "Canyon", "Scott", "Trek", "Merida",
@@ -42,53 +44,29 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     elif "mtb" in full_text or "mountain" in full_text:
         disciplina = "mtb"
 
-    # 3. Transmisión
-    tipo_transmision = "2x10" # Default conservador para gravel
-    transmision_desc = "Transmisión estándar"
+    # 3. Transmisión y Biomecánica (Knowledge Base Dinámica)
+    kb = KnowledgeBase.get_instance()
+    matched_dt = kb.match_drivetrain(full_text)
 
-    if re.search(r'2x12|rx820.*2x|grx.*12[vs]', full_text):
-        tipo_transmision = "2x12"
-        transmision_desc = "Shimano GRX 2x12 velocidades"
-    elif re.search(r'2x11|rx810.*2x|rx600.*2x|grx.*11[vs]', full_text):
-        tipo_transmision = "2x11"
-        transmision_desc = "Shimano GRX 2x11 velocidades"
-    elif re.search(r'2x10|rx400.*2x|tiagra.*2x|grx.*10[vs]', full_text):
+    if matched_dt:
+        tipo_transmision = matched_dt.get("tipo", "2x10")
+        transmision_desc = f"{matched_dt.get('marca')} {matched_dt.get('modelo')} ({tipo_transmision})"
+        bio_info = evaluate_drivetrain_biomechanics(matched_dt.get("platos", []), matched_dt.get("cassette", []))
+    else:
         tipo_transmision = "2x10"
-        transmision_desc = "Shimano GRX RX400 2x10 velocidades"
-    elif re.search(r'1x12|apex.*12|rival.*12|sram.*12[vs]', full_text):
-        tipo_transmision = "1x12"
-        transmision_desc = "SRAM Apex / Rival 1x12 velocidades"
-    elif re.search(r'1x11|apex.*11|grx.*1x11|rival.*11', full_text):
-        tipo_transmision = "1x11"
-        transmision_desc = "SRAM Apex 1x11 o Shimano GRX 1x11"
-    elif re.search(r'cues.*10|1x10|cues.*u6000', full_text):
-        tipo_transmision = "1x10"
-        transmision_desc = "Shimano CUES 1x10 velocidades"
-    elif re.search(r'claris|sora|2x8|2x9', full_text):
-        tipo_transmision = "2x8"
-        transmision_desc = "Shimano Claris/Sora (Iniciación carretera)"
-    elif re.search(r'microshift|acolyte|sword', full_text):
-        tipo_transmision = "1x10" if "10" in full_text else "1x9"
-        transmision_desc = "Microshift Advent / Sword"
-
-    # 4. Frenos
-    tipo_frenos = "hidraulico"
-    frenos_desc = "Frenos de disco hidráulicos"
-
-    if re.search(r'hidr[aá]ulic|grx\s*rx[468]|br-rx|apex\s*hydr|cues\s*u6000', full_text):
-        tipo_frenos = "hidraulico"
-        frenos_desc = "Disco Hidráulico (Shimano GRX / CUES / SRAM)"
-    elif re.search(r'semi.*hidr[aá]ulic|hy/rd|cable.*hidr', full_text):
-        tipo_frenos = "semihidraulico"
-        frenos_desc = "Disco Semihidráulico (TRP HY/RD)"
-    elif re.search(r'mec[aá]nic|cable|spyre|bb7|claris.*disc|sora.*disc', full_text):
-        tipo_frenos = "mecanico_doble"
-        frenos_desc = "Disco Mecánico por cable"
-    elif "grx" in full_text or "apex" in full_text:
-        # Por omisión en gama GRX/Apex suele ser hidráulico
-        tipo_frenos = "hidraulico"
-        frenos_desc = "Disco Hidráulico"
-
+        transmision_desc = "Transmisión estándar 2x10"
+        bio_info = evaluate_drivetrain_biomechanics([46, 30], [11, 36])
+    # 4. Frenos (Knowledge Base Dinámica)
+    matched_br = kb.match_brakes(full_text)
+    tipo_frenos = matched_br.get("tipo", "hidraulico")
+    if tipo_frenos == "hidraulico":
+        frenos_desc = "Frenos de disco hidráulicos"
+    elif tipo_frenos == "semihidraulico":
+        frenos_desc = "Frenos semihidráulicos (TRP HY/RD)"
+    elif tipo_frenos == "mecanico_doble":
+        frenos_desc = "Frenos mecánicos de doble pistón"
+    else:
+        frenos_desc = "Frenos mecánicos por cable"
     # 5. Cuadro y Horquilla
     es_carbono = "carbon" in full_text or "carbono" in full_text
     cuadro = "Carbono Toray High Modulus" if es_carbono else "Aluminio 6061 Hidroformado"
@@ -150,7 +128,11 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         "puntuacion_total": total,
         "nota": nota,
         "tier": tier,
-        "notas_veredicto": veredicto
+        "notas_veredicto": veredicto,
+        "climbing_ratio": bio_info.get("climbing_ratio", 0.85),
+        "lowest_gear_inches": bio_info.get("lowest_gear_inches", 24.0),
+        "highest_gear_inches": bio_info.get("highest_gear_inches", 115.0),
+        "apto_tierra": bio_info.get("apto_tierra", True)
     }
 
 def calcular_rubrica(disciplina: str, tipo_frenos: str, tipo_transmision: str,

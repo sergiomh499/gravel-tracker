@@ -39,11 +39,11 @@ def format_alert_message(bike: Dict[str, Any]) -> str:
         f"💰 <b>Precio:</b> <b>{int(oferta)} €</b>{ahorro_str}\n"
         f"📏 <b>Talla para 1,69 m:</b> <b>{talla}</b> ✅\n"
         f"📍 <b>Tienda:</b> {tienda}\n\n"
-        f"⚙️ <b>Montaje Técnico:</b>\n"
+        f"⚙️ <b>Montaje Técnico & Biomecánica:</b>\n"
         f" • <b>Transmisión:</b> {trans}\n"
         f" • <b>Frenos:</b> {frenos}\n"
-        f" • <b>Cuadro:</b> {cuadro}\n\n"
-        f"👉 <a href='{url}'><b>VER OFERTA DIRECTA AQUÍ</b></a>\n"
+        f" • <b>Cuadro:</b> {cuadro}\n"
+        f" • <b>Ratio de Subida:</b> Climbing Ratio {bike.get('climbing_ratio', 0.85)} (Mín: {bike.get('lowest_gear_inches', 24.0)}\")\n\n"
     )
     return msg
 

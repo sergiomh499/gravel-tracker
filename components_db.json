@@ -1,0 +1,167 @@
+{
+  "transmisiones": {
+    "shimano_grx_rx820_2x12": {
+      "marca": "Shimano",
+      "modelo": "GRX RX-820",
+      "tipo": "2x12",
+      "platos": [48, 31],
+      "cassette": [11, 36],
+      "puntos_asfalto": 10.0,
+      "puntos_tierra": 9.8,
+      "puntos_global": 25.0,
+      "climbing_ratio": 0.86,
+      "accionamiento": "mecanico"
+    },
+    "shimano_grx_rx810_2x11": {
+      "marca": "Shimano",
+      "modelo": "GRX RX-810",
+      "tipo": "2x11",
+      "platos": [48, 31],
+      "cassette": [11, 34],
+      "puntos_asfalto": 9.8,
+      "puntos_tierra": 9.5,
+      "puntos_global": 24.5,
+      "climbing_ratio": 0.91,
+      "accionamiento": "mecanico"
+    },
+    "shimano_grx_rx600_2x11": {
+      "marca": "Shimano",
+      "modelo": "GRX RX-600",
+      "tipo": "2x11",
+      "platos": [46, 30],
+      "cassette": [11, 34],
+      "puntos_asfalto": 9.5,
+      "puntos_tierra": 9.5,
+      "puntos_global": 24.0,
+      "climbing_ratio": 0.88,
+      "accionamiento": "mecanico"
+    },
+    "shimano_grx_rx400_2x10": {
+      "marca": "Shimano",
+      "modelo": "GRX RX-400",
+      "tipo": "2x10",
+      "platos": [46, 30],
+      "cassette": [11, 36],
+      "puntos_asfalto": 9.5,
+      "puntos_tierra": 9.5,
+      "puntos_global": 23.5,
+      "climbing_ratio": 0.83,
+      "accionamiento": "mecanico"
+    },
+    "shimano_cues_u6000_1x10": {
+      "marca": "Shimano",
+      "modelo": "CUES U6000",
+      "tipo": "1x10",
+      "platos": [40],
+      "cassette": [11, 48],
+      "puntos_asfalto": 7.5,
+      "puntos_tierra": 9.0,
+      "puntos_global": 20.0,
+      "climbing_ratio": 0.83,
+      "accionamiento": "mecanico"
+    },
+    "sram_apex_xplr_axs_1x12": {
+      "marca": "SRAM",
+      "modelo": "Apex XPLR AXS",
+      "tipo": "1x12",
+      "platos": [40],
+      "cassette": [11, 44],
+      "puntos_asfalto": 8.0,
+      "puntos_tierra": 9.8,
+      "puntos_global": 23.0,
+      "climbing_ratio": 0.91,
+      "accionamiento": "electronico"
+    },
+    "sram_apex_1_1x11": {
+      "marca": "SRAM",
+      "modelo": "Apex 1",
+      "tipo": "1x11",
+      "platos": [40],
+      "cassette": [11, 42],
+      "puntos_asfalto": 7.5,
+      "puntos_tierra": 9.0,
+      "puntos_global": 20.5,
+      "climbing_ratio": 0.95,
+      "accionamiento": "mecanico"
+    },
+    "campagnolo_ekar_gt_1x13": {
+      "marca": "Campagnolo",
+      "modelo": "Ekar GT",
+      "tipo": "1x13",
+      "platos": [38],
+      "cassette": [9, 44],
+      "puntos_asfalto": 9.2,
+      "puntos_tierra": 9.6,
+      "puntos_global": 24.5,
+      "climbing_ratio": 0.86,
+      "accionamiento": "mecanico"
+    },
+    "microshift_sword_2x10": {
+      "marca": "Microshift",
+      "modelo": "Sword 2x10",
+      "tipo": "2x10",
+      "platos": [46, 29],
+      "cassette": [11, 38],
+      "puntos_asfalto": 8.5,
+      "puntos_tierra": 9.0,
+      "puntos_global": 21.0,
+      "climbing_ratio": 0.76,
+      "accionamiento": "mecanico"
+    },
+    "shimano_claris_2x8": {
+      "marca": "Shimano",
+      "modelo": "Claris R2000",
+      "tipo": "2x8",
+      "platos": [50, 34],
+      "cassette": [11, 32],
+      "puntos_asfalto": 6.0,
+      "puntos_tierra": 5.0,
+      "puntos_global": 12.0,
+      "climbing_ratio": 1.06,
+      "accionamiento": "mecanico"
+    }
+  },
+  "frenos": {
+    "shimano_grx_hidraulico": {
+      "tipo": "hidraulico",
+      "puntos": 25.0,
+      "liquido": "aceite_mineral",
+      "fiabilidad": 10.0,
+      "potencia": 9.5
+    },
+    "sram_hidraulico_dot": {
+      "tipo": "hidraulico",
+      "puntos": 24.0,
+      "liquido": "dot5.1",
+      "fiabilidad": 9.0,
+      "potencia": 9.5
+    },
+    "trp_hyrd_semihidraulico": {
+      "tipo": "semihidraulico",
+      "puntos": 16.0,
+      "liquido": "aceite_mineral",
+      "fiabilidad": 8.0,
+      "potencia": 7.5
+    },
+    "tektro_mira_mecanico": {
+      "tipo": "mecanico_doble",
+      "puntos": 11.0,
+      "liquido": "ninguno_cable",
+      "fiabilidad": 7.5,
+      "potencia": 5.5
+    },
+    "promax_mecanico": {
+      "tipo": "mecanico_mono",
+      "puntos": 7.0,
+      "liquido": "ninguno_cable",
+      "fiabilidad": 6.0,
+      "potencia": 4.5
+    }
+  },
+  "estandares_cuadro": {
+    "ejes_pasantes_12mm": { "puntos": 8.0, "rigidez": "alta" },
+    "cierre_rapido_9mm_qr": { "puntos": 2.0, "rigidez": "baja_obsoleto" },
+    "patilla_sram_udh": { "puntos": 5.0, "futuro_compatible": true },
+    "patilla_propietaria": { "puntos": 1.0, "futuro_compatible": false }
+  }
+}
