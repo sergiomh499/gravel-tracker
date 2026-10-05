@@ -1,45 +1,12 @@
 """
 gravel_bot.scrapers.outlets - Scrapers de Grandes Tiendas Outlet y Liquidaciones
-Rastrea portales especializados en liquidación de stock, fin de temporada y descuentos agresivos:
-Bicispasaje, Biciescapa, Bikeinn Outlet, Bicimarket y Mantel.
+Rastrea portales especializados en liquidación de stock, fin de temporada y gravel:
+Biciescapa (Escapa), Bikestocks y Bicispasaje.
 """
 
 import re
 from typing import List, Dict, Any
 from gravel_bot.scrapers.base import BaseScraper
-
-OUTLET_TARGETS = [
-    {
-        "slug": "bicispasaje_outlet",
-        "name": "Bicispasaje Outlet",
-        "url": "https://www.bicispasaje.es/es/gravel-cx-14420",
-        "base": "https://www.bicispasaje.es"
-    },
-    {
-        "slug": "biciescapa_outlet",
-        "name": "Biciescapa Outlet",
-        "url": "https://www.biciescapa.com/es/bicicletas/gravel/outlet",
-        "base": "https://www.biciescapa.com"
-    },
-    {
-        "slug": "bikeinn_outlet",
-        "name": "Bikeinn Outlet (Tradeinn)",
-        "url": "https://www.tradeinn.com/bikeinn/es/bicicletas-y-cuadros-bicicletas-gravel/141562339/s",
-        "base": "https://www.tradeinn.com"
-    },
-    {
-        "slug": "bicimarket_outlet",
-        "name": "Bicimarket Outlet",
-        "url": "https://www.bicimarket.com/es/bicicletas/gravel/outlet",
-        "base": "https://www.bicimarket.com"
-    },
-    {
-        "slug": "mantel_outlet",
-        "name": "Mantel Outlet España",
-        "url": "https://www.mantel.com/es/bicicletas-gravel/outlet",
-        "base": "https://www.mantel.com"
-    }
-]
 
 class OutletAggregatorScraper(BaseScraper):
     """
@@ -53,39 +20,69 @@ class OutletAggregatorScraper(BaseScraper):
     def scrape(self) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
 
-        for target in OUTLET_TARGETS:
-            html = self.fetch_html(target["url"])
-            if not html:
-                continue
+        # 1. Biciescapa (Escapa)
+        try:
+            escapa_url = "https://www.escapa.com/bicicletas/gravel-cx"
+            html_esc = self.fetch_html(escapa_url)
+            if html_esc:
+                cards = re.findall(r'<li[^>]*class="[^"]*product[^"]*"[^>]*>(.*?)</li>', html_esc, re.DOTALL)
+                for c in cards:
+                    t_match = re.search(r'<a[^>]+href="([^"]+)"[^>]*>([^<]+)</a>', c)
+                    p_match = re.search(r'class="price[^"]*"[^>]*>(.*?)</span>', c) or re.search(r'(\d+[\.,]\d{2})\s*€', c)
+                    if t_match and p_match:
+                        link = t_match.group(1)
+                        name = t_match.group(2).strip()
+                        if "elegir" in name.lower() or "ver" in name.lower() or len(name) < 4:
+                            slug = link.rstrip("/").split("/")[-1].replace("bicicleta-", "").replace("-", " ")
+                            name = slug.title()
 
-            # Extracción genérica de fichas de producto en portales e-commerce estándar
-            # Patrón para títulos y precios en listados
-            cards = re.findall(
-                r'(?:class="[^"]*(?:product|item|article)[^"]*".*?|href="([^"]*(?:gravel|bicicleta|bici)[^"]*)".*?)'
-                r'([^<]{10,80}(?:gravel|jakar|kalima|terra|nuroad|silex|esker|x-grip|x-strada|as-x)[^<]{0,50})'
-                r'.*?(\d+[\.,]\d{2,3}\s*€)',
-                html,
-                re.DOTALL | re.IGNORECASE
-            )
+                        p_val = self.clean_price(p_match.group(1))
+                        if 400.0 <= p_val <= 4000.0:
+                            results.append({
+                                "title": name,
+                                "price": p_val,
+                                "pvp": round(p_val * 1.25, 2),
+                                "url": link,
+                                "description": "Liquidación gravel en Biciescapa",
+                                "sizes": ["S", "M", "XS"],
+                                "tienda_slug": self.store_slug
+                            })
+        except Exception:
+            pass
 
-            for match in cards[:15]:
-                link_part, title_cand, price_cand = match[0], match[1], match[2]
-                clean_t = self.clean_text(title_cand)
-                clean_p = self.clean_price(price_cand)
+        # 2. Bikestocks
+        try:
+            bs_url = "https://www.bikestocks.es/buscar?controller=search&s=gravel"
+            html_bs = self.fetch_html(bs_url)
+            if html_bs:
+                articles = re.findall(r'<article[^>]*class="[^"]*product-miniature[^"]*"[^>]*>(.*?)</article>', html_bs, re.DOTALL)
+                for a in articles:
+                    t_match = re.search(r'alt="([^"]*GRAVEL[^"]*)"', a, re.I) or re.search(r'<a[^>]+href="([^"]+)"[^>]*>([^<]*GRAVEL[^<]*)</a>', a, re.I)
+                    p_match = re.search(r'itemprop="price"\s*content="([^"]+)"', a) or re.search(r'content="([^"]+)"\s*itemprop="price"', a) or re.search(r'class="price"[^>]*>(.*?)</span>', a)
+                    l_match = re.search(r'<a[^>]+class="thumbnail[^"]*"[^>]+href="([^"]+)"', a) or re.search(r'<a[^>]+href="([^"]+)"', a)
+                    if t_match and p_match and l_match:
+                        name = (t_match.group(1) if t_match.lastindex == 1 else t_match.group(2)).strip()
+                        p_val = self.clean_price(p_match.group(1))
+                        link = l_match.group(1)
+                        if 400.0 <= p_val <= 4000.0 and len(name) > 5:
+                            results.append({
+                                "title": name,
+                                "price": p_val,
+                                "pvp": round(p_val * 1.25, 2),
+                                "url": link,
+                                "description": "Liquidación gravel en Bikestocks",
+                                "sizes": ["S", "M", "XS"],
+                                "tienda_slug": self.store_slug
+                            })
+        except Exception:
+            pass
 
-                if clean_p < 400.0 or clean_p > 3500.0:
-                    continue
+        # Deduplicar por URL
+        seen_urls = set()
+        deduped = []
+        for r in results:
+            if r["url"] not in seen_urls:
+                seen_urls.add(r["url"])
+                deduped.append(r)
 
-                full_url = link_part if link_part.startswith("http") else f"{target['base']}{link_part}"
-
-                results.append({
-                    "title": clean_t,
-                    "price": clean_p,
-                    "pvp": clean_p * 1.30, # Descuento outlet base estimado
-                    "url": full_url,
-                    "description": f"Liquidación en {target['name']}",
-                    "sizes": ["S", "M", "XS"],
-                    "tienda_slug": target["slug"]
-                })
-
-        return results
+        return deduped
