@@ -40,6 +40,7 @@ class CiclosCorredorScraper(BaseScraper):
             for m in matches:
                 url_path = m.group(1)
                 item_title = m.group(2).strip()
+                tail = m.group(3)
                 title_lower = item_title.lower()
                 if any(nb in title_lower for nb in ["ruedas", "gafas", "rodillo", "casco", "zapatilla", "maillot", "culotte", "cubierta"]):
                     continue

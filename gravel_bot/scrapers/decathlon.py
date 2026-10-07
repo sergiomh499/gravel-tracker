@@ -61,17 +61,18 @@ class DecathlonScraper(BaseScraper):
     def scrape(self) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
 
-        # Intentar rastreo dinámico o aplicar catálogo verificado con descuento de empleado
         for item in self.CATALOGO_MODELOS:
             pvp = item["pvp"]
-            # Descuento de empleado de Decathlon: 20% sobre marcas propias (Triban / Van Rysel)
-            precio_empleado = round(pvp * 0.80, 2)
+            # Precio público real en tienda y web Decathlon
             results.append({
                 "title": item["title"],
-                "price": precio_empleado,
+                "price": pvp,
                 "pvp": pvp,
                 "url": item["url"],
-                "sizes": item["sizes"]
+                "sizes": item["sizes"],
+                "store_slug": self.store_slug,
+                "store_name": self.store_name,
+                "store_type": self.store_type
             })
 
         return results
