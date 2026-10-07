@@ -390,8 +390,7 @@ def _process_message(msg: Dict[str, Any]):
             if p_clean.isdigit():
                 max_p = float(p_clean)
         from gravel_bot.deal_detector import format_deals_message
-        send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0), reply_markup=DEALS_INLINE_KEYBOARD)
-
+        send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0, solo_talla_compatible=True), reply_markup=DEALS_INLINE_KEYBOARD)
     elif any(text.startswith(cmd) for cmd in ["⚙️ biplato", "biplato", "/biplato", "/2x", "doble plato"]):
         from gravel_bot.bike_inspector import format_available_bikes_message
         send_reply(chat_id, format_available_bikes_message(transmission="2x"), reply_markup=MAIN_KEYBOARD)

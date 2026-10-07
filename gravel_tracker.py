@@ -91,11 +91,14 @@ if __name__ == "__main__":
             listar_ranking(filtro_tier=tier_arg)
         elif cmd in ["--deals", "deals"]:
             buscar_gangas()
-        elif cmd in ["--pure-deals", "pure-deals", "--chollos"]:
+        elif cmd in ["--pure-deals", "pure-deals", "--chollos", "--chollos-talla"]:
             from gravel_bot.deal_detector import format_pure_deals_message
             max_p = None
             min_pct = 20.0
+            solo_talla = (cmd == "--chollos-talla" or any(a in sys.argv for a in ["--talla", "-t", "--size"]))
             for arg in sys.argv[2:]:
+                if arg in ["--talla", "-t", "--size"]:
+                    continue
                 if arg.endswith("%"):
                     val = arg.rstrip("%")
                     if val.replace(".", "").isdigit():
@@ -106,7 +109,7 @@ if __name__ == "__main__":
                         min_pct = num
                     else:
                         max_p = num
-            print(format_pure_deals_message(max_price=max_p, min_discount_pct=min_pct))
+            print(format_pure_deals_message(max_price=max_p, min_discount_pct=min_pct, solo_talla_compatible=solo_talla))
         elif cmd in ["--historial", "historial", "--history"]:
             from gravel_bot.deal_detector import format_bike_price_history_message
             target = sys.argv[2] if len(sys.argv) > 2 else "Kalima"
