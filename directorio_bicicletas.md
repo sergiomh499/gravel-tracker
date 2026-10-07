@@ -13,6 +13,9 @@
   5. [Orbea Terra H30 / H40 (Ocasión Revisada)](#5-orbea-terra-h30--h40-segunda-mano-revisada)
   6. [Megamo West 15 (Ocasión Carbono)](#6-megamo-west-15-segunda-mano-carbono)
   7. [Trek Checkpoint ALR 5 (Ocasión)](#7-trek-checkpoint-alr-5-segunda-mano-revisada)
+  7.1 [Van Rysel GRVL AF Shimano GRX 2x12v](#71-van-rysel-grvl-af-shimano-grx-2x12v-decathlon-usera--madrid-río)
+  7.2 [Kross Esker 6.0 GRX 2x11v](#72-kross-esker-60-grx-2x11v-montaje-élite)
+  7.3 [Radon REGARD AL 7.0 2026](#73-radon-regard-al-70-2026-directo-bike-discount)
 * **Tier S (Planes B de Gran Nivel - Nota 8.0 a 8.9):**
   8. [Canyon Grizl 6 AL](#8-canyon-grizl-6-al-outlet)
   9. [R-Raymon Territ Comp](#9-r-raymon-territ-comp)
@@ -21,15 +24,41 @@
   12. [Ghost Asket Advanced 10](#12-ghost-asket-advanced-10)
   13. [Focus ATLAS 6 APEX LTD](#13-focus-atlas-6-apex-ltd)
   14. [Kona Rove Silver Cromoly](#14-kona-rove-silver-cromoly)
+  14.1 [Triban RC 520 All-Road / Gravel 105](#141-triban-rc-520-all-road--gravel-105-decathlon-usera)
+  14.2 [Triban GRVL 520 SRAM Apex 1](#142-triban-grvl-520-sram-apex-1-decathlon-usera)
 * **Tier A (Opciones Económicas Funcionales - Nota 6.5 a 7.9):**
   15. [Triban GRVL 520 Subcompact](#15-triban-grvl-520-subcompact)
   16. [KTM X-Strada 30](#16-ktm-x-strada-30)
   17. [Cube Nuroad One](#17-cube-nuroad-one)
+  17.1 [Triban GRVL 120](#171-triban-grvl-120-decathlon-usera)
 * **Tier B (Penalizadas por Componentes - Nota 5.0 a 6.4):**
   18. [Cube Nuroad Pro](#18-cube-nuroad-pro)
 * **Tier C (El Muro de los Errores y Descartes - Nota < 5.0):**
   19. [Modelos Calmera en Talla M (Terra H40 25, Terra H41, Silex 4000)](#19-modelos-de-calmera-descartados-por-error-de-talla-m)
   20. [Descartes por Disciplina, Manillar o Sobreprecio (Avant, Nulane, Esker 1.0, Nicasio, Revolt)](#20-descartes-históricos-por-disciplina-o-falla-estructural)
+
+---
+
+### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
+*Última sincronización robótica:* `2026-10-07 19:53:13` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+
+| # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
+| :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
+| 1 | [MMR X-Grip 30 Charcoal](https://www.elcorteingles.es/deportes/A200805188-gris-negro-pr-bicicleta-de-gravel-unisex-x-grip-30-charcoal-mmr/) | **1299.0 €** ** | **Tier S+** | 9.8/10 | S (Estricta) | El Corte Inglés (Red Madrid / Online) | 🟢 En Stock |
+| 2 | [Van Rysel Gravel Van Rysel GRVL AF Shimano GRX 2x1](https://www.decathlon.es/es/p/bicicleta-gravel-shimano-grx-negro-2x12v-af/343001/c381m8766972) | **1119.2 €** *(1399.0 €)* | **Tier S+** | 9.7/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 3 | [Kross Esker 6.0 GRX 2x11v](https://www.tradeinn.com/bikeinn/es/kross-esker-6.0-700-grx-rx820-2025-gravel-bike/141928636/p) | **1299.0 €** *(1799.0 €)* | **Tier S+** | 9.5/10 | S (51-52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 4 | [Radon REGARD AL 7.0 2026](https://www.bike-discount.de/de/radon-regard-al-7.0-20168494) | **999.0 €** *(1199.0 €)* | **Tier S+** | 9.5/10 | 50 cm (S) | Bike-Discount (Alemania / Envío España) | 🟢 En Stock |
+| 5 | [Van Rysel GRVL AF SRAM Apex 1x12v](https://www.decathlon.es/es/deportes/ciclismo/bicicletas-gravel) | **1119.2 €** *(1399.0 €)* | **Tier S+** | 9.5/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 6 | [R-Raymon Territ Comp](https://www.alltricks.es/F-41505-velos-route-_-cyclocross-_-triathlon/P-3274261-raymon_territ_comp_gravel_bike_shimano_cues_10s_700_mm_black_green_2026) | **999.0 €** *(1299.0 €)* | **Tier S** | 8.9/10 | S (52 cm) | Alltricks | 🟢 En Stock |
+| 7 | [Kross Esker 2.0 (GEN2)](https://www.elcorteingles.es/deportes/A201469055-gris-blanco-pr-bicicleta-de-gravel-de-hombre-esker-20-kross/) | **1049.0 €** *(1199.0 €)* | **Tier S** | 8.9/10 | S (51-52 cm) | El Corte Inglés (Red Madrid / Online) | 🟢 En Stock |
+| 8 | [Triban RC 520 All-Road / Gravel 105](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** *(999.0 €)* | **Tier S** | 8.8/10 | S (51 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 9 | [Triban GRVL 520 Subcompact](https://www.decathlon.es/es/p/bicicleta-de-gravel-cuadro-aluminio-shimano-105-triban-grvl-520/) | **1099.0 €** *(1199.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 10 | [Triban GRVL 520 SRAM Apex 1](https://www.decathlon.es/es/p/bicicleta-de-gravel-triban-grvl-520-sram-apex-1/_/R-p-313016) | **1099.0 €** *(1199.0 €)* | **Tier S** | 8.1/10 | S (51 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 11 | [Van Rysel GRVL AF Microshift Sword 1x10v](https://www.decathlon.es/es/deportes/ciclismo/bicicletas-gravel) | **719.2 €** *(899.0 €)* | **Tier S** | 7.9/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 12 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier A** | 7.8/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
+| 13 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier A** | 7.8/10 | S (52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
+| 14 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
+| 15 | [Desconocida Avísame](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-junior-2027-92866) | **799.0 €** *(998.75 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
 
 ---
 
@@ -146,6 +175,20 @@
 * **Veredicto:** Chollazo mecánico. Monta desviadores de gama alta RX810 y ruedas DT Swiss a precio de gama de entrada.
 
 ---
+
+### 7.3. Radon REGARD AL 7.0 2026 (Directo Bike-Discount)
+* **Cuadro:** Aluminio hidroformado con guiado interno y puntos de anclaje bikepacking.
+* **Horquilla:** REGARD Full Carbon con eje pasante de 12 mm.
+* **Ejes:** Pasantes 12x100 mm delantero / 12x142 mm trasero.
+* **Transmisión:** Shimano CUES 1x11v (Plato 40T con piñón 11-50 Linkglide alta durabilidad).
+* **Frenos:** Disco 100% hidráulico Shimano CUES BR-U6030 con discos de **180 mm / 180 mm**.
+* **Ruedas y Cubiertas:** Ruedas Alexrims / bujes Shimano con cubiertas Schwalbe G-One Allround 700x45c.
+* **Tu Talla:** **50 cm (S)** (Bielas 170 mm, potencia 75 mm, reach calibrado para 1,69 m).
+* **Precio:** **999 €** *(PVP 1.199 €)* en [Bike-Discount](https://www.bike-discount.de/de/radon-regard-al-7.0-20168494).
+* **Puntuación Rúbrica:** C1: 25 | C2: 20 | C3: 20 | C4: 20 | C5: 10 $\to$ **95 / 100 (Nota: 9.5)**.
+* **Veredicto:** El mayor chollo nuevo sub-1.000 € del mercado europeo. Supera a la Raymon al montar 11 velocidades y discos sobredimensionados de 180 mm con horquilla full carbon.
+
+---
 ---
 
 ## Tier S: Planes B de Gran Nivel (Puntuación 80 - 89)
@@ -223,6 +266,32 @@
 
 ---
 
+### 14.1. Triban RC 520 All-Road / Gravel 105 (Decathlon Usera)
+* **Cuadro:** Aluminio 6061 T6 con garantía de por vida.
+* **Horquilla:** Carbono con tubo de dirección en aluminio.
+* **Transmisión:** Shimano 105 R7000 completo de 2x11 velocidades (Platos 50/34 con cassette 11-32).
+* **Frenos:** Pinzas **semi-hidráulicas TRP HY/RD** con discos de 160 mm (pistones hidráulicos accionados por cable).
+* **Cubiertas:** 700x28c/32c de serie (paso de rueda verificado hasta 700x38c para tierra compacta).
+* **Tu Talla:** **S (51 cm)**.
+* **Precio:** **899 €** *(PVP 999 €)* en Decathlon Usera / Madrid Río (a 2,5 km de Méndez Álvaro).
+* **Puntuación Rúbrica:** C1: 16 | C2: 25 | C3: 18 | C4: 19 | C5: 10 $\to$ **88 / 100 (Nota: 8.8)**.
+* **Veredicto:** Imbatible para el 50% de asfalto en Madrid por 899 €. Monta grupo completo Shimano 105 de 22 velocidades y pinzas de doble pistón hidráulico TRP HY/RD.
+
+---
+
+### 14.2. Triban GRVL 520 SRAM Apex 1 (Decathlon Usera)
+* **Cuadro:** Aluminio 6061 con geometría específica de gravel y paso de rueda de 42 mm.
+* **Horquilla:** Carbono con tubo de aluminio y eje pasante 12x100 mm.
+* **Transmisión:** SRAM Apex 1 (monoplato 40T con piñón 11-42 de 11 velocidades).
+* **Frenos:** Pinzas **semi-hidráulicas TRP HY/RD** con discos de 160 mm.
+* **Cubiertas:** Hutchinson Touareg 700x40c Tubeless Ready (gran tracción en grava suelta y caminos rotos).
+* **Tu Talla:** **S (51 cm)**.
+* **Precio:** **1.099 €** *(PVP 1.199 €)* en Decathlon Usera / Madrid Río.
+* **Puntuación Rúbrica:** C1: 16 | C2: 20 | C3: 18 | C4: 17 | C5: 10 $\to$ **81 / 100 (Nota: 8.1)**.
+* **Veredicto:** La opción pura de gravel de Decathlon para pistas sueltas, con cubiertas Touareg tubeless y ergonomía de maneta SRAM Apex.
+
+---
+
 ## Tier A: Opciones Económicas con Concesiones (Nota 6.5 a 7.9)
 
 ### 15. Triban GRVL 520 Subcompact
@@ -254,6 +323,19 @@
 * **Tu Talla:** **XS o S**.
 * **Puntuación Rúbrica:** C1: 25 | C2: 14 | C3: 6 | C4: 18 | C5: 9 $\to$ **72 / 100 (Nota: 7.2)**.
 * **Veredicto:** Frenos hidráulicos por 799 €, pero la horquilla de aluminio transmite todas las vibraciones del camino a muñecas y brazos.
+
+---
+
+### 17.1. Triban GRVL 120 (Decathlon Usera)
+* **Cuadro:** Aluminio 6061 con horquilla de carbono.
+* **Ejes:** Cierres rápidos QR de 9 mm.
+* **Transmisión:** Microshift XLE 1x10 velocidades (Plato 38T con cassette 11-42).
+* **Frenos:** **Mecánicos Promax DSK** de tiro por cable simple.
+* **Cubiertas:** Hutchinson Overide 700x38c Tubeless Ready.
+* **Tu Talla:** **S (51 cm)**.
+* **Precio:** **699 €** *(PVP 799 €)* en Decathlon Usera / Madrid Río.
+* **Puntuación Rúbrica:** C1: 8 | C2: 17 | C3: 18 | C4: 20 | C5: 10 $\to$ **73 / 100 (Nota: 7.3)**.
+* **Veredicto:** La puerta de entrada más económica al gravel con garantía Decathlon, aunque los frenos mecánicos y ejes de 9 mm exigen mejoras futuras si el terreno se vuelve técnico.
 
 ---
 

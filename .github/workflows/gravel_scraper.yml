@@ -11,7 +11,8 @@ on:
     - cron: '0 6 * * *'
     - cron: '0 7 * * *'
   workflow_dispatch: # Permite ejecución manual bajo demanda desde GitHub
-# Permisos para que el action pueda guardar la base de datos actualizada
+
+# Permisos para que el action pueda guardar la base de datos y la documentación actualizada
 permissions:
   contents: write
 
@@ -45,16 +46,16 @@ jobs:
         run: |
           python3 gravel_tracker.py --scan
 
-      - name: Persistir Base de Datos Actualizada (Sólo en Cron o Dispatch)
+      - name: Persistir Base de Datos y Tier List Actualizada (Sólo en Cron o Dispatch)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "Gravel Bot"
           git config user.email "bot@gravel.local"
-          git add gravel_madrid.db
-          # Solo hace commit si hay cambios reales en los precios o registros
+          git add gravel_madrid.db directorio_bicicletas.md
+          # Solo hace commit si hay cambios reales en los precios, stock o registros
           if ! git diff --staged --quiet; then
-            git commit -m "Auto-update: sincronización de precios e historial [skip ci]"
+            git commit -m "Auto-update: sincronización robótica de stock, precios y Tier List [skip ci]"
             git push
           else
-            echo "No hay variaciones en la base de datos."
+            echo "No hay variaciones en la base de datos ni en el Tier List."
           fi
