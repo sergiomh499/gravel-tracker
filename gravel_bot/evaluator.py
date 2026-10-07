@@ -83,13 +83,17 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     patilla_udh = 1 if ("udh" in full_text or "sram udh" in full_text or "universal derailleur" in full_text) else 0
 
     # 7. Compatibilidad Dinámica de Talla según Marca y Modelo (no global)
-    talla_valida, talla_sugerida, explicacion_talla = evaluate_size_compatibility_dynamic(
-        marca=marca,
-        modelo=title,
-        altura_cm=169,
-        sizes_encontradas=sizes_clean
-    )
-    # 8. Cálculo de Rúbrica
+    if disciplina != "gravel":
+        talla_valida = False
+        talla_sugerida = "Incompatible (No gravel)"
+        explicacion_talla = f"Descartada por disciplina ({disciplina})."
+    else:
+        talla_valida, talla_sugerida, explicacion_talla = evaluate_size_compatibility_dynamic(
+            marca=marca,
+            modelo=title,
+            altura_cm=169,
+            sizes_encontradas=sizes_clean
+        )
     c1, c2, c3, c4, c5, total, nota, tier = calcular_rubrica(
         disciplina=disciplina,
         tipo_frenos=tipo_frenos,
@@ -146,15 +150,14 @@ def calcular_rubrica(disciplina: str, tipo_frenos: str, tipo_transmision: str,
     """
     # Si la disciplina no es gravel o tiene falla grave
     if disciplina.lower() != "gravel":
-        c1 = 8.0 if tipo_frenos != "hidraulico" else 20.0
-        c2 = 10.0
+        c1 = 4.0
+        c2 = 4.0
         c3 = 2.0
-        c4 = 10.0
-        c5 = 2.0 if "flat" in disciplina.lower() else 10.0
+        c4 = 5.0
+        c5 = 0.0
         total = c1 + c2 + c3 + c4 + c5
         nota = round(total / 10.0, 1)
         return c1, c2, c3, c4, c5, total, nota, "Tier C"
-
     # C1. Frenos (25 pts)
     if tipo_frenos == "hidraulico":
         c1 = 25.0
@@ -254,6 +257,20 @@ def calcular_rubrica_personalizada(bike: Dict[str, Any], perfil: Dict[str, Any])
     patilla_udh = bike.get("patilla_udh", 0)
     precio = float(bike.get("precio_oferta", 0.0))
     marca = bike.get("marca", "")
+
+    if disciplina.lower() != "gravel":
+        result = dict(bike)
+        result["c1_frenos"] = 4.0
+        result["c2_transmision"] = 4.0
+        result["c3_cuadro"] = 2.0
+        result["c4_precio"] = 5.0
+        result["c5_talla"] = 0.0
+        result["puntuacion_total"] = 15.0
+        result["nota"] = 1.5
+        result["tier"] = "Tier C"
+        result["talla_recomendada_169"] = "No compatible"
+        result["notas_veredicto"] = f"Descartada: Disciplina {disciplina} no apta para gravel 50/50."
+        return result
 
     # 1. C1: Frenos (25 pts)
     if tipo_frenos == "hidraulico":

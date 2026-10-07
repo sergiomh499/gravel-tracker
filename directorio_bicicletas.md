@@ -40,7 +40,7 @@
 ---
 
 ### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
-*Última sincronización robótica:* `2026-10-07 22:01:07` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+*Última sincronización robótica:* `2026-10-07 23:29:28` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
 
 | # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
@@ -57,8 +57,8 @@
 | 11 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier A** | 7.8/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
 | 12 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier A** | 7.8/10 | S (52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
 | 13 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
-| 14 | [Desconocida Avísame](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-junior-2027-92866) | **799.0 €** *(998.75 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
-| 15 | [Triban Gravel Triban RC 520 All-Road Shimano 10](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 14 | [Triban Gravel Triban RC 520 All-Road Shimano 10](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 15 | [Van Rysel Gravel Van Rysel GRVL AF Microshift Swor](https://www.decathlon.es/es/deportes/ciclismo/bicicletas-gravel) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
 
 ---
 

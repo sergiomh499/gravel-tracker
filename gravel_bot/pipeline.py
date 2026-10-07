@@ -31,7 +31,14 @@ def sync_directorio_markdown(db_path: str = DB_PATH, md_path: str = "directorio_
                    b.talla_recomendada_169, t.nombre as tienda, b.en_stock, b.url_oferta
             FROM bicicletas b
             LEFT JOIN tiendas t ON b.tienda_id = t.id
-            WHERE b.precio_oferta <= 1350 AND b.talla_recomendada_169 != 'No compatible'
+            WHERE b.precio_oferta <= 1350 
+              AND b.talla_recomendada_169 NOT IN ('No compatible', 'Incompatible (No gravel)')
+              AND (b.disciplina IS NULL OR b.disciplina = 'gravel')
+              AND b.marca NOT IN ('Desconocida')
+              AND b.modelo NOT LIKE '%junior%'
+              AND b.modelo NOT LIKE '%niño%'
+              AND b.modelo NOT LIKE '%infantil%'
+              AND b.tier != 'Tier C'
             ORDER BY b.en_stock DESC, b.puntuacion_total DESC
             LIMIT 15
         """)
