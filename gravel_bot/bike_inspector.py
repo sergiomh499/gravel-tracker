@@ -147,6 +147,7 @@ def format_detailed_bike_card(identifier: Any) -> str:
     msg += f" • Fluctuaciones registradas: <b>{bike['historial_conteo']}</b> registros acumulados\n"
 
     return msg
+format_bike_inspection_message = format_detailed_bike_card
 
 def get_database_stats() -> Dict[str, Any]:
     """

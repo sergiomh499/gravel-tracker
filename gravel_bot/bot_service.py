@@ -65,12 +65,91 @@ MAIN_KEYBOARD = {
     "keyboard": [
         [{"text": "🏆 Ver Mi Podio"}, {"text": "🔥 Chollos <1.000€"}],
         [{"text": "⚙️ Biplato (2x)"}, {"text": "⚙️ Monoplato (1x)"}],
-        [{"text": "♻️ Ocasión con Garantía"}, {"text": "👤 Mi Perfil"}]
+        [{"text": "⚔️ Comparar Bicis"}, {"text": "♻️ Ocasión con Garantía"}],
+        [{"text": "📍 Tiendas Físicas"}, {"text": "👤 Mi Perfil"}]
     ],
     "resize_keyboard": True,
     "is_persistent": True
 }
 
+COMPARE_PRESETS_KEYBOARD = {
+    "inline_keyboard": [
+        [{"text": "⚔️ Conor Kalima vs Megamo Jakar 30", "callback_data": "/vs kalima jakar"}],
+        [{"text": "⚔️ Conor Kalima vs R-Raymon Territ", "callback_data": "/vs kalima raymon"}],
+        [{"text": "⚔️ Megamo Jakar vs MMR X-Grip 30", "callback_data": "/vs jakar x-grip"}],
+        [{"text": "⚔️ Canyon Grizl vs Conor Kalima", "callback_data": "/vs grizl kalima"}]
+    ]
+}
+
+PODIUM_INLINE_KEYBOARD = {
+    "inline_keyboard": [
+        [
+            {"text": "📄 Ficha Kalima", "callback_data": "/ficha kalima"},
+            {"text": "📄 Ficha Jakar 30", "callback_data": "/ficha jakar"}
+        ],
+        [
+            {"text": "📄 Ficha Territ Comp", "callback_data": "/ficha raymon"},
+            {"text": "📄 Ficha MMR X-Grip", "callback_data": "/ficha x-grip"}
+        ],
+        [
+            {"text": "⚔️ Comparar Kalima vs Jakar", "callback_data": "/vs kalima jakar"}
+        ]
+    ]
+}
+
+DEALS_INLINE_KEYBOARD = {
+    "inline_keyboard": [
+        [
+            {"text": "🔥 Chollos <1.000€", "callback_data": "/chollazos 1000"},
+            {"text": "💥 Superchollos <800€", "callback_data": "/chollazos 800"}
+        ],
+        [
+            {"text": "♻️ Ocasión con Garantía", "callback_data": "/ocasion"},
+            {"text": "🏆 Ver Mi Podio", "callback_data": "/ranking"}
+        ]
+    ]
+}
+
+PROFILE_INLINE_KEYBOARD = {
+    "inline_keyboard": [
+        [
+            {"text": "📏 168 cm", "callback_data": "mido 168 cm"},
+            {"text": "📏 169 cm", "callback_data": "mido 169 cm"},
+            {"text": "📏 172 cm", "callback_data": "mido 172 cm"}
+        ],
+        [
+            {"text": "💰 1.000 €", "callback_data": "presupuesto 1000 €"},
+            {"text": "💰 1.200 €", "callback_data": "presupuesto 1200 €"},
+            {"text": "💰 1.350 €", "callback_data": "presupuesto 1350 €"}
+        ],
+        [
+            {"text": "⚙️ Doble Plato (2x)", "callback_data": "/transmision 2x"},
+            {"text": "⚙️ Monoplato (1x)", "callback_data": "/transmision 1x"}
+        ]
+    ]
+}
+
+def get_bike_inline_keyboard(bike: Dict[str, Any]) -> Dict[str, Any]:
+    """Genera teclado inline de acciones para una bicicleta concreta."""
+    rows = []
+    url = bike.get("url_oferta")
+    if url:
+        rows.append([{"text": "🛒 Ver Oferta en Tienda", "url": url}])
+
+    mod = (bike.get("modelo") or "").lower()
+    m_token = mod.split()[0] if mod else "bici"
+    rival = "jakar" if "kalima" in mod else ("kalima" if "jakar" in mod else "kalima")
+    trans = (bike.get("transmision") or "").lower()
+    dev_arg = "1x" if "1x" in trans else "2x"
+
+    rows.append([
+        {"text": f"⚔️ vs {rival.title()}", "callback_data": f"/vs {m_token} {rival}"},
+        {"text": f"⚙️ Cadencia {dev_arg}", "callback_data": f"/desarrollo {dev_arg}"}
+    ])
+
+    talla_raw = str(bike.get("talla_recomendada_169", "S")).split()[0]
+    rows.append([{"text": f"🔔 Avisar si reponen ({talla_raw})", "callback_data": f"/avisatalla {m_token} {talla_raw}"}])
+    return {"inline_keyboard": rows}
 def send_reply(chat_id: int, text: str, reply_markup: Optional[Dict[str, Any]] = None):
     """Envía un mensaje formateado a Telegram con auto-chunking seguro (<3800 chars) y teclado interactivo."""
     if not TELEGRAM_BOT_TOKEN or not text:
@@ -301,7 +380,7 @@ def _process_message(msg: Dict[str, Any]):
         send_reply(chat_id, help_msg, reply_markup=MAIN_KEYBOARD)
 
     elif any(text.startswith(cmd) for cmd in ["🏆", "ver mi podio", "/ranking", "ranking", "podio", "que me compro", "recomiendame"]):
-        send_reply(chat_id, format_tier_list_message(chat_id), reply_markup=MAIN_KEYBOARD)
+        send_reply(chat_id, format_tier_list_message(chat_id), reply_markup=PODIUM_INLINE_KEYBOARD)
 
     elif any(text.startswith(cmd) for cmd in ["🔥", "chollos <1.000€", "chollos", "gangas", "/chollazos", "chollazos"]):
         parts = raw_text.split()
@@ -311,7 +390,7 @@ def _process_message(msg: Dict[str, Any]):
             if p_clean.isdigit():
                 max_p = float(p_clean)
         from gravel_bot.deal_detector import format_deals_message
-        send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0), reply_markup=MAIN_KEYBOARD)
+        send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0), reply_markup=DEALS_INLINE_KEYBOARD)
 
     elif any(text.startswith(cmd) for cmd in ["⚙️ biplato", "biplato", "/biplato", "/2x", "doble plato"]):
         from gravel_bot.bike_inspector import format_available_bikes_message
@@ -321,13 +400,19 @@ def _process_message(msg: Dict[str, Any]):
         from gravel_bot.bike_inspector import format_available_bikes_message
         send_reply(chat_id, format_available_bikes_message(transmission="1x"), reply_markup=MAIN_KEYBOARD)
 
+    elif any(text.startswith(cmd) for cmd in ["⚔️ comparar bicis", "comparar bicis", "comparar", "/comparar_menu"]):
+        send_reply(chat_id, "⚔️ <b>DUELOS DIRECTOS POPULARES</b>\n\nToca un enfrentamiento para ver la comparativa al instante o escribe el tuyo (ej: <code>kalima vs jakar</code>):", reply_markup=COMPARE_PRESETS_KEYBOARD)
+
     elif any(text.startswith(cmd) for cmd in ["♻️", "ocasion", "ocasión", "/ocasion", "segunda mano"]):
         from gravel_bot.bike_inspector import format_available_bikes_message
         send_reply(chat_id, format_available_bikes_message(store_type="ocasion"), reply_markup=MAIN_KEYBOARD)
 
-    elif any(text.startswith(cmd) for cmd in ["👤", "/perfil", "perfil", "mi perfil", "mi talla"]):
-        send_reply(chat_id, format_profile_message(chat_id, username), reply_markup=MAIN_KEYBOARD)
+    elif any(text.startswith(cmd) for cmd in ["📍", "tiendas", "/tiendas", "tiendas físicas"]):
+        from gravel_bot.store_recommender import format_stores_recommendation_message
+        send_reply(chat_id, format_stores_recommendation_message(), reply_markup=MAIN_KEYBOARD)
 
+    elif any(text.startswith(cmd) for cmd in ["👤", "/perfil", "perfil", "mi perfil", "mi talla"]):
+        send_reply(chat_id, format_profile_message(chat_id, username), reply_markup=PROFILE_INLINE_KEYBOARD)
     # Detección inteligente de estatura en lenguaje natural (ej: "mido 170", "mido 1.69", "172 cm")
     elif (re.search(r'\b(?:mido|altura|estatura)\s*(\d{2,3}(?:[.,]\d{1,2})?)\s*(?:cm|m)?\b', text) or
           re.search(r'\b(\d{3})\s*cm\b', text)):
@@ -356,8 +441,10 @@ def _process_message(msg: Dict[str, Any]):
 
     # Detección inteligente de modelo suelto (ej: "kalima", "jakar", "terra")
     elif text.strip() in ["kalima", "jakar", "terra", "territ", "nuroad", "grizl", "checkpoint", "esker", "x-grip", "x-strada", "asket", "atlas"]:
-        from gravel_bot.bike_inspector import format_bike_inspection_message
-        send_reply(chat_id, format_bike_inspection_message(text.strip()), reply_markup=MAIN_KEYBOARD)
+        from gravel_bot.bike_inspector import format_bike_inspection_message, get_detailed_bike_info
+        b_info = get_detailed_bike_info(text.strip())
+        kb = get_bike_inline_keyboard(b_info) if b_info else None
+        send_reply(chat_id, format_bike_inspection_message(text.strip()), reply_markup=kb)
     elif text.startswith("/altura") or text.startswith("/setaltura"):
         parts = raw_text.split()
         if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
@@ -645,8 +732,10 @@ def _process_message(msg: Dict[str, Any]):
         parts = raw_text.split(maxsplit=1)
         if len(parts) > 1 and parts[1].strip():
             query = parts[1].strip()
-            from gravel_bot.bike_inspector import format_detailed_bike_card
-            send_reply(chat_id, format_detailed_bike_card(query))
+            from gravel_bot.bike_inspector import format_detailed_bike_card, get_detailed_bike_info
+            b_info = get_detailed_bike_info(query)
+            kb = get_bike_inline_keyboard(b_info) if b_info else None
+            send_reply(chat_id, format_detailed_bike_card(query), reply_markup=kb)
         else:
             send_reply(chat_id, "ℹ️ Escribe el modelo que deseas consultar. Ejemplos:\n • <code>/ficha Kalima</code>\n • <code>/ficha Jakar</code>\n • <code>/ficha Orbea</code>\n • <code>/ficha Esker</code>")
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/add_tienda", "/anadirtienda", "add_tienda"]):
@@ -764,8 +853,30 @@ def run_bot_polling(duration_seconds: Optional[int] = None):
                 for update in updates:
                     offset = update["update_id"] + 1
                     msg = update.get("message")
+                    cb = update.get("callback_query")
                     if msg:
                         threading.Thread(target=handle_incoming_message, args=(msg,), daemon=True).start()
+                    elif cb:
+                        # Responder callback query para cerrar el spinner en la app móvil
+                        try:
+                            cb_id = cb.get("id")
+                            if cb_id:
+                                ans_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+                                ans_payload = json.dumps({"callback_query_id": cb_id}).encode("utf-8")
+                                ans_req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
+                                with urllib.request.urlopen(ans_req, timeout=5):
+                                    pass
+                        except Exception:
+                            pass
+                        cb_data = cb.get("data", "")
+                        cb_msg = cb.get("message", {})
+                        cb_user = cb.get("from", {})
+                        pseudo_msg = {
+                            "chat": cb_msg.get("chat", {}),
+                            "text": cb_data,
+                            "username": cb_user.get("username", "")
+                        }
+                        threading.Thread(target=handle_incoming_message, args=(pseudo_msg,), daemon=True).start()
                 if not updates:
                     time.sleep(1)
         except Exception as e:

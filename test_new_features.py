@@ -72,5 +72,38 @@ class TestNewFeatures(unittest.TestCase):
         msg = format_available_bikes_message(store_type="ocasion")
         self.assertIn("BICICLETAS DISPONIBLES EN STOCK", msg)
 
+    def test_interactive_keyboards_and_button_processing(self):
+        """Verifica que todos los botones y teclados interactivos funcionen sin error."""
+        from gravel_bot.bot_service import (
+            MAIN_KEYBOARD, COMPARE_PRESETS_KEYBOARD, PODIUM_INLINE_KEYBOARD,
+            DEALS_INLINE_KEYBOARD, PROFILE_INLINE_KEYBOARD, get_bike_inline_keyboard,
+            _process_message
+        )
+
+        # Verificar estructura de teclados
+        self.assertEqual(len(MAIN_KEYBOARD["keyboard"]), 4)
+        self.assertGreaterEqual(len(COMPARE_PRESETS_KEYBOARD["inline_keyboard"]), 3)
+        self.assertGreaterEqual(len(PODIUM_INLINE_KEYBOARD["inline_keyboard"]), 2)
+        self.assertGreaterEqual(len(DEALS_INLINE_KEYBOARD["inline_keyboard"]), 2)
+        self.assertGreaterEqual(len(PROFILE_INLINE_KEYBOARD["inline_keyboard"]), 3)
+
+        # Verificar generación de inline keyboard para bicicleta
+        bike_sample = {
+            "modelo": "Kalima GRX400",
+            "url_oferta": "https://tienda.com/kalima",
+            "transmision": "Shimano GRX 2x10",
+            "talla_recomendada_169": "SM"
+        }
+        ikb = get_bike_inline_keyboard(bike_sample)
+        self.assertIn("inline_keyboard", ikb)
+        self.assertTrue(any("url" in btn for row in ikb["inline_keyboard"] for btn in row))
+
+        # Simular toques de botón mediante _process_message
+        test_chat_id = 998877
+        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "⚔️ Comparar Bicis"})
+        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "📍 Tiendas Físicas"})
+        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "👤 Mi Perfil"})
+        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "kalima"})
+
 if __name__ == "__main__":
     unittest.main()
