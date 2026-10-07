@@ -39,7 +39,10 @@ class CiclosCorredorScraper(BaseScraper):
             )
             for m in matches:
                 url_path = m.group(1)
-                tail = m.group(3)
+                item_title = m.group(2).strip()
+                title_lower = item_title.lower()
+                if any(nb in title_lower for nb in ["ruedas", "gafas", "rodillo", "casco", "zapatilla", "maillot", "culotte", "cubierta"]):
+                    continue
 
                 sale_m = re.search(r'class="sale[^"]*"[^>]*>\s*([\d\.,]+)\s*€', tail)
                 amount_m = re.search(r'class="amount[^"]*"[^>]*>\s*([\d\.,]+)\s*€', tail)
