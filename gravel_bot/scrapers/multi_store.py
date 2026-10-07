@@ -29,6 +29,8 @@ class MultiStoreAggregatorScraper(BaseScraper):
         "bicimarket_online",
         "canyon_espana",
         "bicispasaje_online",
+        "ciclos_corredor",
+        "bikestocks_online",
         "sanferbike_m30",
         "fabregues_online",
         "mammoth_madrid",
@@ -43,7 +45,6 @@ class MultiStoreAggregatorScraper(BaseScraper):
 
         slug = store["slug"]
         s_name = store["nombre"]
-        parser = store.get("parser", "prestashop")
 
         # 1. Estrategia JSON-LD universal
         json_products = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
@@ -125,21 +126,20 @@ class MultiStoreAggregatorScraper(BaseScraper):
         return deduped
 
     def scrape(self) -> List[Dict[str, Any]]:
-        # Filtrar tiendas elegibles para rastreo concurrente
+        # Tiendas elegibles con URLs que responden
         eligible_stores = [s for s in STORE_DIRECTORY if s["slug"] not in self.EXCLUDED_SLUGS and s.get("scrape_url")]
         all_results: List[Dict[str, Any]] = []
 
         def _fetch_and_parse(store: Dict[str, Any]):
             url = store.get("scrape_url", store["url"])
             try:
-                html = self.fetch_html(url, timeout=5)
+                html = self.fetch_html(url, timeout=4)
                 if html:
                     return self._parse_store_html(store, html)
             except Exception:
                 pass
             return []
 
-        # Ejecución paralela con 8 workers y timeout acotado
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             future_to_store = {executor.submit(_fetch_and_parse, store): store for store in eligible_stores}
             for future in concurrent.futures.as_completed(future_to_store):
