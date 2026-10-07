@@ -31,13 +31,14 @@ jobs:
 
       - name: Ejecutar Batería de Tests Unitarios e Integrados
         run: |
-          python3 test_intensive.py
+          python3 test_new_features.py
           python3 test_bot.py
+          python3 test_intensive.py
 
       - name: Validar Catálogo y Sincronización
         run: |
           python3 gravel_tracker.py --validate
-
+          python3 gravel_tracker.py --sync-doc
       - name: Ejecutar Rastreo y Enviar Alertas a Telegram (Sólo en Cron o Dispatch)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:

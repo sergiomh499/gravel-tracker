@@ -40,7 +40,7 @@
 ---
 
 ### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
-*Última sincronización robótica:* `2026-10-07 23:31:04` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+*Última sincronización robótica:* `2026-10-07 23:35:37` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
 
 | # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
@@ -56,9 +56,9 @@
 | 10 | [Orbea Terra H40 (Calmera Talla M)](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier A** | 7.9/10 | M (Inadecuada 173-179cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
 | 11 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier A** | 7.8/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
 | 12 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier A** | 7.8/10 | S (52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
-| 13 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
-| 14 | [Triban Gravel Triban RC 520 All-Road Shimano 10](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
-| 15 | [Van Rysel Gravel Van Rysel GRVL AF Microshift Swor](https://www.decathlon.es/es/deportes/ciclismo/bicicletas-gravel) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 13 | [Trek Checkpoint ALR 3 Gen 3 2026](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-trek-checkpoint-alr-3-gen-3-2026#/40-talla-xs/86069-color-granate) | **1039.2 €** *(1299.0 €)* | **Tier A** | 7.8/10 | 52 cm | Fabregues Bicicletas | 🟢 En Stock |
+| 14 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
+| 15 | [Triban Gravel Triban RC 520 All-Road Shimano 10](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
 
 ---
 
