@@ -23,9 +23,8 @@ class BaseScraper:
         if not html_text:
             err = meta.get("error", "desconocido")
             reason = meta.get("reason", "")
-            if err != "network_exception":
+            if err not in ["network_exception", "http_error", "domain_in_cooldown"] and status not in [403, 404]:
                 print(f"⚠️ [{self.name}] Petición no completada a {url} (Status {status}, Motivo: {err} {reason})")
-            return None
         return html_text
 
     @staticmethod

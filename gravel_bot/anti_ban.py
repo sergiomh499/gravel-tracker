@@ -181,8 +181,17 @@ class ResilientSession:
                     error_body = e.read().decode("utf-8", errors="ignore")
                 except Exception:
                     pass
+                # Resolución de retos JavaScript automáticos basados en cookie (ej. PrestaShop / DDoS Shield)
+                token_m = re.search(r'var\s+t\s*=\s*["\']([a-f0-9]{32,64})["\']', error_body)
+                cookie_m = re.search(r'document\.cookie\s*=\s*["\']([^"\'=]+)=', error_body)
+                if token_m and attempt < max_retries:
+                    c_token = token_m.group(1)
+                    c_name = cookie_m.group(1) if cookie_m else "en_ad_challenge"
+                    headers["Cookie"] = f"{c_name}={c_token}"
+                    time.sleep(0.5)
+                    continue
 
-                # Detectar CAPTCHA o reto
+                # Detectar CAPTCHA o reto insuperable
                 if cls.detect_anti_bot_challenge(error_body, status):
                     cls.set_cooldown(domain, seconds=300.0)
                     return None, status, {
@@ -190,7 +199,6 @@ class ResilientSession:
                         "status": status,
                         "reason": f"WAF / CAPTCHA activado en {domain}. Enfriamiento aplicado para proteger la IP."
                     }
-
                 # Backoff exponencial si es 429 Too Many Requests o 503
                 if status in [429, 503] and attempt < max_retries:
                     retry_after = e.headers.get("Retry-After")

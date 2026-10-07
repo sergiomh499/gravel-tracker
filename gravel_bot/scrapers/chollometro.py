@@ -19,9 +19,13 @@ class ChollometroScraper(BaseScraper):
         self.base_url = "https://www.chollometro.com"
         self.search_queries = [
             "bicicleta+gravel",
-            "bici+gravel"
+            "bici+gravel",
+            "megamo+jakar",
+            "conor+kalima",
+            "cube+nuroad",
+            "orbea+terra",
+            "kross+esker"
         ]
-
     def scrape(self) -> List[Dict[str, Any]]:
         """
         Rastrea las búsquedas en Chollometro y extrae ofertas activas de gravel.
@@ -69,9 +73,8 @@ class ChollometroScraper(BaseScraper):
                     except (ValueError, TypeError):
                         continue
 
-                    if price_float <= 0:
+                    if price_float < 400.0 or price_float > 4500.0:
                         continue
-
                     slug = thread.get("titleSlug") or str(tid)
                     deal_url = f"{self.base_url}/ofertas/{slug}-{tid}"
                     merchant = thread.get("merchant")
