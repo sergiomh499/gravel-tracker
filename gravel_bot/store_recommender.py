@@ -96,34 +96,102 @@ MADRID_PHYSICAL_STORES: List[Dict[str, Any]] = [
     }
 ]
 
-def get_recommended_physical_stores(presupuesto: float = 1000.0, max_distancia_km: float = 5.0) -> List[Dict[str, Any]]:
+def get_recommended_physical_stores(zona: str = "Madrid", max_distancia_km: float = 15.0) -> List[Dict[str, Any]]:
     """
-    Ordena y filtra las tiendas físicas de Madrid según cercanía y capacidad de oferta.
+    Obtiene las tiendas físicas recomendadas según la ubicación/zona configurada por el usuario.
+    Si la zona es Madrid, prioriza el listado detallado con distancias exactas.
+    Para otras zonas, consulta la base de datos o puntos de recogida nacionales (Decathlon, ECI, Bicimarket).
     """
-    filtered = [s for s in MADRID_PHYSICAL_STORES if s["distancia_km"] <= max_distancia_km]
-    # Ponderar por puntuación y proximidad
-    filtered.sort(key=lambda s: (s["distancia_km"], -s["puntuacion_tienda"]))
-    return filtered
+    from gravel_bot.db import get_connection
+    z_clean = (zona or "Madrid").strip()
 
-def format_stores_recommendation_message() -> str:
-    """Genera la guía recomendada de visita a tiendas físicas para Telegram o terminal."""
-    stores = get_recommended_physical_stores()
+    if any(k in z_clean.lower() for k in ["madrid", "méndez", "mendez"]):
+        filtered = [s for s in MADRID_PHYSICAL_STORES if s.get("distancia_km", 99) <= max_distancia_km]
+        filtered.sort(key=lambda s: (s.get("distancia_km", 99), -s.get("puntuacion_tienda", 8.0)))
+        return filtered
 
-    msg = "🏪 <b>TIENDAS FÍSICAS RECOMENDADAS PARA VISITAR (DESDE MÉNDEZ ÁLVARO)</b> 🏪\n\n"
-    msg += "<i>Ruta optimizada para ver, probar talla y negociar gravels con ~1.000 €:</i>\n\n"
+    # Búsqueda dinámica en base de datos para la zona configurada
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM tiendas 
+        WHERE tipo = 'fisica' 
+          AND (LOWER(direccion) LIKE ? OR LOWER(nombre) LIKE ?)
+    """, (f"%{z_clean.lower()}%", f"%{z_clean.lower()}%"))
+    db_stores = [dict(r) for r in c.fetchall()]
+    conn.close()
+
+    if db_stores:
+        results = []
+        for s in db_stores:
+            results.append({
+                "nombre": s["nombre"],
+                "direccion": s.get("direccion") or f"Zona {z_clean}",
+                "distancia_km": s.get("distancia_km") or 2.0,
+                "tiempo_llegada": "Local / En tu zona",
+                "marcas_clave": [m.strip() for m in (s.get("marcas") or "Gravel").split(",")],
+                "corner_outlet": True,
+                "puntuacion_tienda": 9.0,
+                "consejo_negociacion": "Consulta promociones en tienda física y servicio postventa de taller local."
+            })
+        return results
+
+    # Redes nacionales con servicio y recogida en la ubicación configurada
+    return [
+        {
+            "nombre": f"Decathlon {z_clean} (Punto Recogida / Taller)",
+            "direccion": f"Tienda oficial Decathlon en {z_clean}",
+            "distancia_km": 3.0,
+            "tiempo_llegada": "Recogida gratuita en tienda",
+            "marcas_clave": ["Van Rysel", "Triban"],
+            "corner_outlet": True,
+            "puntuacion_tienda": 9.0,
+            "consejo_negociacion": "Pruébate la talla in situ; disponen de 60 días de devolución y primera revisión gratuita."
+        },
+        {
+            "nombre": f"Bicimarket Red de Puntos ({z_clean})",
+            "direccion": f"Punto de entrega y taller asociado en {z_clean}",
+            "distancia_km": 4.0,
+            "tiempo_llegada": "Red nacional de 120 talleres",
+            "marcas_clave": ["Conor", "Merida", "KTM", "BH"],
+            "corner_outlet": True,
+            "puntuacion_tienda": 8.9,
+            "consejo_negociacion": "Permite comprar online a precio de liquidación y recoger montada y ajustada en taller local."
+        },
+        {
+            "nombre": f"El Corte Inglés Deportes ({z_clean})",
+            "direccion": f"Centro comercial ECI en {z_clean}",
+            "distancia_km": 5.0,
+            "tiempo_llegada": "Click & Collect directo",
+            "marcas_clave": ["MMR", "Kross"],
+            "corner_outlet": True,
+            "puntuacion_tienda": 8.7,
+            "consejo_negociacion": "Aprovecha la financiación al 0% TAE y garantía oficial de devolución."
+        }
+    ]
+
+def format_stores_recommendation_message(zona: Optional[str] = None) -> str:
+    """Genera la guía recomendada de visita a tiendas físicas adaptada a la ubicación configurada."""
+    from gravel_bot.config import RIDER_PROFILE
+    current_zona = (zona or RIDER_PROFILE.get("zona") or "Madrid").strip()
+    stores = get_recommended_physical_stores(zona=current_zona)
+
+    msg = f"🏪 <b>TIENDAS FÍSICAS RECOMENDADAS ({current_zona.upper()})</b> 🏪\n\n"
+    msg += f"<i>Opciones con punto de recogida, prueba de talla y taller para tu zona ({current_zona}):</i>\n\n"
 
     for i, s in enumerate(stores, 1):
-        corner = "🏷️ <b>Tiene zona Outlet</b>" if s["corner_outlet"] else "📦 Stock bajo pedido"
-        marcas = ", ".join(s["marcas_clave"])
-        msg += f"<b>{i}. {s['nombre']}</b> (⭐ {s['puntuacion_tienda']}/10)\n"
-        msg += f"   📍 <i>{s['direccion']}</i>\n"
-        msg += f"   🚶 <b>Distancia:</b> a {s['distancia_km']} km ({s['tiempo_llegada']})\n"
+        corner = "🏷️ <b>Tiene zona Outlet</b>" if s.get("corner_outlet") else "📦 Stock bajo pedido"
+        marcas = ", ".join(s.get("marcas_clave", ["Gravel"]))
+        msg += f"<b>{i}. {s['nombre']}</b> (⭐ {s.get('puntuacion_tienda', 9.0)}/10)\n"
+        msg += f"   📍 <i>{s.get('direccion', 'Local')}</i>\n"
+        dist = f"a {s['distancia_km']} km" if s.get("distancia_km") else "Local"
+        msg += f"   🚶 <b>Distancia / Acceso:</b> {dist} ({s.get('tiempo_llegada', '')})\n"
         msg += f"   🚲 <b>Marcas:</b> {marcas}\n"
         msg += f"   {corner}\n"
-        msg += f"   💡 <b>Truco Pro:</b> {s['consejo_negociacion']}\n\n"
+        msg += f"   💡 <b>Consejo:</b> {s.get('consejo_negociacion', '')}\n\n"
 
-    msg += "🎯 <b>Estrategia Recomendada de Compra en Tienda:</b>\n"
-    msg += "1. Visita primero <b>Sanferbike M-30</b> (está a 800m a pie de tu casa) para ver in situ la Megamo Jakar y la Orbea Terra.\n"
-    msg += "2. Toma el Cercanías 3 min a <b>Calmera (Atocha)</b> para preguntar por disponibilidad de la Conor Kalima en talla SM.\n"
-    msg += "3. Pide siempre que te igualen el precio del outlet online o incluyan pedales/tubelizado de regalo."
+    msg += f"🎯 <b>Estrategia de Compra en {current_zona}:</b>\n"
+    msg += "1. Visita o contacta con la tienda para consultar si pueden pedirte tu talla exacta.\n"
+    msg += "2. Pregunta si igualan el precio de liquidación web o si incluyen pedales/tubelizado de regalo.\n"
+    msg += "3. Comprueba siempre la garantía oficial y el servicio de primer ajuste de transmisión."
     return msg

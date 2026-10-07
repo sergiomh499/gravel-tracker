@@ -59,6 +59,8 @@ class TestNewFeatures(unittest.TestCase):
 
     def test_configurable_location(self):
         """Verifica que la ubicación del usuario sea 100% configurable."""
+        from gravel_bot.store_recommender import format_stores_recommendation_message
+        from gravel_bot.deal_detector import format_pure_deals_message
         uid = get_or_create_user(777456, "madrid_user")
         update_user_profile(777456, zona="Valencia")
         prof = get_user_profile(777456)
@@ -67,6 +69,14 @@ class TestNewFeatures(unittest.TestCase):
         msg = format_profile_message(777456, "madrid_user")
         self.assertIn("Valencia", msg)
 
+        # Tiendas físicas adaptadas a la ubicación configurada
+        stores_msg = format_stores_recommendation_message(zona="Valencia")
+        self.assertIn("VALENCIA", stores_msg)
+        self.assertIn("Decathlon Valencia", stores_msg)
+
+        # Chollos filtrados por ubicación configurada
+        deals_msg = format_pure_deals_message(zona_fisica="Valencia")
+        self.assertIn("Valencia", deals_msg)
     def test_certified_secondhand_filter(self):
         """Verifica el filtrado de bicicletas de ocasión certificada."""
         msg = format_available_bikes_message(store_type="ocasion")

@@ -91,13 +91,22 @@ if __name__ == "__main__":
             listar_ranking(filtro_tier=tier_arg)
         elif cmd in ["--deals", "deals"]:
             buscar_gangas()
-        elif cmd in ["--pure-deals", "pure-deals", "--chollos", "--chollos-talla"]:
+        elif cmd in ["--pure-deals", "pure-deals", "--chollos", "--chollos-talla", "--chollos-zona"]:
             from gravel_bot.deal_detector import format_pure_deals_message
+            from gravel_bot.config import RIDER_PROFILE
             max_p = None
             min_pct = 20.0
-            solo_talla = (cmd == "--chollos-talla" or any(a in sys.argv for a in ["--talla", "-t", "--size"]))
+            solo_talla = (cmd in ["--chollos-talla", "--chollos-zona"] or any(a in sys.argv for a in ["--talla", "-t", "--size"]))
+            zona_arg = None
+            if any(a in sys.argv for a in ["--local", "-l", "--zona", "--chollos-zona"]):
+                for idx, a in enumerate(sys.argv):
+                    if a == "--zona" and idx + 1 < len(sys.argv):
+                        zona_arg = sys.argv[idx + 1]
+                        break
+                if not zona_arg:
+                    zona_arg = RIDER_PROFILE.get("zona", "Madrid")
             for arg in sys.argv[2:]:
-                if arg in ["--talla", "-t", "--size"]:
+                if arg in ["--talla", "-t", "--size", "--local", "-l", "--zona", "--chollos-zona", zona_arg]:
                     continue
                 if arg.endswith("%"):
                     val = arg.rstrip("%")
@@ -109,7 +118,7 @@ if __name__ == "__main__":
                         min_pct = num
                     else:
                         max_p = num
-            print(format_pure_deals_message(max_price=max_p, min_discount_pct=min_pct, solo_talla_compatible=solo_talla))
+            print(format_pure_deals_message(max_price=max_p, min_discount_pct=min_pct, solo_talla_compatible=solo_talla, zona_fisica=zona_arg))
         elif cmd in ["--historial", "historial", "--history"]:
             from gravel_bot.deal_detector import format_bike_price_history_message
             target = sys.argv[2] if len(sys.argv) > 2 else "Kalima"
@@ -145,7 +154,9 @@ if __name__ == "__main__":
                 print("⚠️ Uso: python3 gravel_tracker.py --add-store <NOMBRE> <URL> [TIPO]")
         elif cmd in ["--tiendas", "tiendas", "--stores"]:
             from gravel_bot.store_recommender import format_stores_recommendation_message
-            print(format_stores_recommendation_message())
+            from gravel_bot.config import RIDER_PROFILE
+            zona_param = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith("-") else RIDER_PROFILE.get("zona", "Madrid")
+            print(format_stores_recommendation_message(zona=zona_param))
         elif cmd in ["--scan", "scan"]:
             run_pipeline(send_alerts=True, verbose=True)
         elif cmd in ["--test-telegram", "test-telegram"]:
@@ -153,6 +164,10 @@ if __name__ == "__main__":
         elif cmd in ["--validate", "validate"]:
             from gravel_bot.validator import run_full_catalog_validation
             run_full_catalog_validation(auto_repair=True, verbose=True)
+        elif cmd in ["--purge", "purge"]:
+            from gravel_bot.db import purge_obsolete_and_junior_models
+            res = purge_obsolete_and_junior_models()
+            print(f"🧹 Purgado completado: {res['purged_bikes']} modelos no aptos/junior eliminados | {res['purged_prices']} entradas de historial.")
         elif cmd in ["--vs", "vs", "--compare"]:
             from gravel_bot.bike_inspector import format_bike_comparison_message
             b1 = sys.argv[2] if len(sys.argv) > 2 else "kalima"

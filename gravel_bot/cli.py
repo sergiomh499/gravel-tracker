@@ -16,8 +16,11 @@ def cmd_list(args):
     tier_filter = args.tier if hasattr(args, "tier") and args.tier else None
     bikes = get_all_bikes(tier_filter)
 
+    from gravel_bot.config import RIDER_PROFILE
+    zona = RIDER_PROFILE.get("zona", "Tu Zona")
+    est = RIDER_PROFILE.get("estatura_m", 1.69)
     print("\n" + "="*110)
-    print(f"RANKING DE BICICLETAS GRAVEL (Madrid 50/50 - 1,69m - Presupuesto Flexible)")
+    print(f"RANKING DE BICICLETAS GRAVEL ({zona} 50/50 - {est}m - Presupuesto Flexible)")
     if tier_filter:
         print(f"Filtro aplicado: {tier_filter}")
     print("="*110)

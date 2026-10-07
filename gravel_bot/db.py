@@ -6,6 +6,7 @@ import sqlite3
 import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
+from contextlib import contextmanager
 from gravel_bot.config import DB_PATH
 
 def get_connection() -> sqlite3.Connection:
@@ -13,6 +14,18 @@ def get_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
+@contextmanager
+def db_session():
+    """Context manager para transacciones SQLite seguras con auto-commit y cierre garantizado."""
+    conn = get_connection()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 def init_db():
     conn = get_connection()
     c = conn.cursor()
@@ -547,13 +560,41 @@ def get_user_size_alerts(user_id: int) -> List[sqlite3.Row]:
 
 def delete_size_alert(alert_id: int, user_id: int) -> bool:
     """Desactiva una alerta de reposición de talla."""
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("""
-    UPDATE alertas_talla_usuario SET activa = 0
-    WHERE id = ? AND usuario_id = ?
-    """, (alert_id, user_id))
-    affected = c.rowcount > 0
-    conn.commit()
-    conn.close()
-    return affected
+    with db_session() as conn:
+        c = conn.cursor()
+        c.execute("""
+        UPDATE alertas_talla_usuario SET activa = 0
+        WHERE id = ? AND usuario_id = ?
+        """, (alert_id, user_id))
+        return c.rowcount > 0
+
+def purge_obsolete_and_junior_models() -> Dict[str, int]:
+    """
+    Purga automáticamente registros no deseados en la base de datos:
+    - Bicicletas junior / infantiles / niños
+    - Modelos de disciplinas incompatibles o artefactos de test
+    - Slugs huérfanos con marca 'Desconocida'
+    """
+    with db_session() as conn:
+        c = conn.cursor()
+        c.execute("""
+            SELECT id FROM bicicletas
+            WHERE disciplina IN ('junior', 'infantil', 'test_artifact')
+               OR LOWER(modelo) LIKE '%junior%'
+               OR LOWER(modelo) LIKE '%niño%'
+               OR LOWER(modelo) LIKE '%infantil%'
+               OR marca = 'Desconocida'
+        """)
+        rows = c.fetchall()
+        bad_ids = [r[0] for r in rows]
+        if not bad_ids:
+            return {"purged_bikes": 0, "purged_prices": 0}
+
+        placeholders = ','.join('?' for _ in bad_ids)
+        c.execute(f"DELETE FROM historial_precios WHERE bicicleta_id IN ({placeholders})", bad_ids)
+        purged_prices = c.rowcount
+        c.execute(f"DELETE FROM alertas_notificadas WHERE bicicleta_id IN ({placeholders})", bad_ids)
+        c.execute(f"DELETE FROM alertas_por_usuario WHERE bicicleta_id IN ({placeholders})", bad_ids)
+        c.execute(f"DELETE FROM bicicletas WHERE id IN ({placeholders})", bad_ids)
+        purged_bikes = c.rowcount
+        return {"purged_bikes": purged_bikes, "purged_prices": purged_prices}

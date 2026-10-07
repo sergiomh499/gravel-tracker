@@ -50,7 +50,7 @@ def evaluate_drivetrain_biomechanics(platos: List[int], cassette: List[int]) -> 
         climb_desc = "Desarrollo escalador ultra-ligero (ideal para puertos de tierra con piedras)"
         apto_tierra = True
     elif climb_ratio <= 0.86:
-        climb_desc = "Desarrollo óptimo mixto 50/50 (sube cualquier cuesta de Madrid sin desmontar)"
+        climb_desc = "Desarrollo óptimo mixto 50/50 (sube cualquier rampa exigente sin desmontar)"
         apto_tierra = True
     elif climb_ratio <= 0.95:
         climb_desc = "Desarrollo estándar exigente en rampas >12%"

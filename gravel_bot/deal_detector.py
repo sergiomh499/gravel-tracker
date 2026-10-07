@@ -15,7 +15,8 @@ def get_pure_deals(
     solo_gravel: bool = True,
     max_price: Optional[float] = None,
     limit: int = 15,
-    solo_talla_compatible: bool = False
+    solo_talla_compatible: bool = False,
+    zona_fisica: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Recupera bicicletas ordenadas estrictamente por diferencia de precio (descuento o ahorro),
@@ -35,6 +36,13 @@ def get_pure_deals(
       AND b.en_stock = 1
       AND (? = 0 OR b.disciplina = 'gravel')
       AND (? = 0 OR (b.talla_recomendada_169 NOT IN ('No compatible', 'Incompatible (No gravel)') AND b.tier != 'Tier C'))
+      AND (? IS NULL OR (
+          t.tipo = 'fisica' AND (
+              LOWER(t.direccion) LIKE '%' || LOWER(?) || '%'
+              OR LOWER(t.nombre) LIKE '%' || LOWER(?) || '%'
+              OR (? IN ('madrid', 'mendez alvaro', 'méndez álvaro') AND (t.distancia_km IS NOT NULL OR t.direccion LIKE '%Madrid%'))
+          )
+      ))
       AND (? IS NULL OR b.precio_oferta <= ?)
       AND (
           ((b.precio_pvp - b.precio_oferta) / b.precio_pvp * 100) >= ?
@@ -43,26 +51,47 @@ def get_pure_deals(
     ORDER BY {order_clause}
     LIMIT ?
     """
-    c.execute(query, (1 if solo_gravel else 0, 1 if solo_talla_compatible else 0, max_price, max_price, min_discount_pct, min_savings_eur, limit))
+    zona_clean = zona_fisica.strip().lower() if zona_fisica else None
+    c.execute(query, (
+        1 if solo_gravel else 0,
+        1 if solo_talla_compatible else 0,
+        zona_clean,
+        zona_clean or "",
+        zona_clean or "",
+        zona_clean or "",
+        max_price, max_price, min_discount_pct, min_savings_eur, limit
+    ))
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def format_pure_deals_message(sort_by: str = "descuento_pct", limit: int = 10, max_price: Optional[float] = None, min_discount_pct: float = 20.0, solo_talla_compatible: bool = False) -> str:
+def format_pure_deals_message(
+    sort_by: str = "descuento_pct",
+    limit: int = 10,
+    max_price: Optional[float] = None,
+    min_discount_pct: float = 20.0,
+    solo_talla_compatible: bool = False,
+    zona_fisica: Optional[str] = None
+) -> str:
     """
     Genera el informe de Chollos Puros filtrado y ordenado por porcentaje de descuento para Telegram y CLI.
-    Permite filtrar por precio máximo de oferta, porcentaje mínimo y compatibilidad estricta de talla.
+    Permite filtrar por precio máximo de oferta, porcentaje mínimo, compatibilidad de talla y proximidad física.
     """
-    deals = get_pure_deals(sort_by=sort_by, limit=limit, max_price=max_price, min_discount_pct=min_discount_pct, solo_talla_compatible=solo_talla_compatible)
+    deals = get_pure_deals(
+        sort_by=sort_by, limit=limit, max_price=max_price,
+        min_discount_pct=min_discount_pct, solo_talla_compatible=solo_talla_compatible,
+        zona_fisica=zona_fisica
+    )
     if not deals:
         precio_nota = f" por debajo de {int(max_price)} €" if max_price else ""
-        return f"ℹ️ No se han detectado gangas con descuentos superiores al {int(min_discount_pct)}%{precio_nota} en este momento."
-
+        zona_nota = f" para tiendas físicas en {zona_fisica}" if zona_fisica else ""
+        return f"ℹ️ No se han detectado gangas con descuentos superiores al {int(min_discount_pct)}%{precio_nota}{zona_nota} en este momento."
     filtros = [f"Mín: {int(min_discount_pct)}%"]
     if max_price:
         filtros.append(f"Tope: {int(max_price)} €")
+    if zona_fisica:
+        filtros.append(f"📍 Física ({zona_fisica})")
     filtros_txt = " | ".join(filtros)
-
     msg = "💥 <b>DETECTOR DE GANGAS Y CHOLLOS POR % DE DESCUENTO</b> 💥\n"
     msg += f"<i>(Ordenado estrictamente por mayor porcentaje de descuento real sobre PVP | {filtros_txt})</i>\n\n"
     for i, d in enumerate(deals, 1):

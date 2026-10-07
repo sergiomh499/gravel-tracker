@@ -10,7 +10,7 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional, Tuple
 from gravel_bot.config import DEFAULT_HEADERS
-from gravel_bot.db import get_connection, upsert_bike, record_price
+from gravel_bot.db import get_connection, upsert_bike, record_price, purge_obsolete_and_junior_models
 from gravel_bot.geometry_sizing import get_recommended_size_dynamic, evaluate_size_compatibility_dynamic
 from gravel_bot.scrapers.base import BaseScraper
 from gravel_bot.evaluator import calcular_rubrica
@@ -144,14 +144,19 @@ def run_full_catalog_validation(auto_repair: bool = True, limit: Optional[int] =
     if limit:
         rows = rows[:limit]
 
+    purged_info = {"purged_bikes": 0, "purged_prices": 0}
+    if auto_repair:
+        purged_info = purge_obsolete_and_junior_models()
+
     if verbose:
         print(f"🩺 [VALIDATOR] Iniciando validación automática de {len(rows)} bicicletas...")
+        if purged_info["purged_bikes"] > 0:
+            print(f" 🧹 [PURGE] Purgados {purged_info['purged_bikes']} modelos no válidos/junior.")
 
     validated_count = 0
     repaired_sizes = 0
     price_updates = 0
     out_of_stock_marked = 0
-
     for row in rows:
         b = dict(row)
         val = validate_bike_record(b, altura_cm=169)
@@ -195,6 +200,7 @@ def run_full_catalog_validation(auto_repair: bool = True, limit: Optional[int] =
 
     summary = {
         "total_auditadas": validated_count,
+        "modelos_purgados": purged_info["purged_bikes"],
         "tallas_reparadas_dinamicamente": repaired_sizes,
         "precios_actualizados": price_updates,
         "sin_stock_detectados": out_of_stock_marked
@@ -204,6 +210,8 @@ def run_full_catalog_validation(auto_repair: bool = True, limit: Optional[int] =
         print("\n" + "="*70)
         print("📊 [RESUMEN DE AUDITORÍA Y VALIDACIÓN]")
         print(f" • Total bicicletas auditadas: {validated_count}")
+        if purged_info["purged_bikes"] > 0:
+            print(f" • Modelos obsoletos/junior purgados: {purged_info['purged_bikes']}")
         print(f" • Tallas recalculadas dinámicamente por marca/modelo: {repaired_sizes}")
         print(f" • Precios sincronizados: {price_updates}")
         print(f" • Modelos sin stock marcados: {out_of_stock_marked}")

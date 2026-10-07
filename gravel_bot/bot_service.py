@@ -36,14 +36,14 @@ def register_bot_commands():
         {"command": "chollazos", "description": "💥 Gangas por % descuento (ej: /chollazos 1200)"},
         {"command": "ficha", "description": "📄 Ficha y dónde comprar (ej: /ficha kalima)"},
         {"command": "historial", "description": "📈 Evolución de precios (ej: /historial jakar)"},
-        {"command": "tiendas", "description": "📍 Tiendas físicas en Madrid recomendadas"},
+        {"command": "tiendas", "description": "📍 Tiendas físicas recomendadas en tu zona"},
         {"command": "stats", "description": "📊 Estadísticas globales de catálogo y precios"},
         {"command": "perfil", "description": "👤 Ver tu perfil y tallaje dinámico"},
         {"command": "altura", "description": "📏 Ajustar tu estatura (ej: /altura 169)"},
         {"command": "presupuesto", "description": "💰 Ajustar presupuesto (ej: /presupuesto 1000)"},
         {"command": "biplato", "description": "⚙️ Filtrar sólo bicis de doble plato (2x)"},
         {"command": "monoplato", "description": "⚙️ Filtrar sólo bicis monoplato (1x)"},
-        {"command": "ubicacion", "description": "📍 Cambiar tu ciudad/zona (ej: /ubicacion Madrid)"},
+        {"command": "ubicacion", "description": "📍 Cambiar tu ciudad/zona (ej: /ubicacion Valencia)"},
         {"command": "holgura", "description": "🎯 Margen para chollos (ej: /holgura 15)"},
         {"command": "transmision", "description": "⚙️ Preferencia 1x / 2x / indiferente"},
         {"command": "desarrollo", "description": "⚙️ Simulador de cadencia y velocidades (ej: /desarrollo 2x)"},
@@ -408,8 +408,9 @@ def _process_message(msg: Dict[str, Any]):
 
     elif any(text.startswith(cmd) for cmd in ["📍", "tiendas", "/tiendas", "tiendas físicas"]):
         from gravel_bot.store_recommender import format_stores_recommendation_message
-        send_reply(chat_id, format_stores_recommendation_message(), reply_markup=MAIN_KEYBOARD)
-
+        prof = get_profile_for_chat(chat_id, username)
+        zona_usr = prof.get("zona", "Madrid")
+        send_reply(chat_id, format_stores_recommendation_message(zona=zona_usr), reply_markup=MAIN_KEYBOARD)
     elif any(text.startswith(cmd) for cmd in ["👤", "/perfil", "perfil", "mi perfil", "mi talla"]):
         send_reply(chat_id, format_profile_message(chat_id, username), reply_markup=PROFILE_INLINE_KEYBOARD)
     # Detección inteligente de estatura en lenguaje natural (ej: "mido 170", "mido 1.69", "172 cm")
@@ -617,8 +618,9 @@ def _process_message(msg: Dict[str, Any]):
         send_reply(chat_id, format_bike_price_history_message(query))
 
     elif text in ["/tiendas", "/tiendasfisicas", "/dondeir", "tiendas", "ruta"]:
-        send_reply(chat_id, format_stores_recommendation_message())
-
+        prof = get_profile_for_chat(chat_id, username)
+        zona_usr = prof.get("zona", "Madrid")
+        send_reply(chat_id, format_stores_recommendation_message(zona=zona_usr))
     elif text in ["/top", "/splus", "top", "s+"]:
         init_db()
         prof = get_profile_for_chat(chat_id, username)

@@ -9,25 +9,47 @@ import urllib.request
 import urllib.parse
 from typing import List, Dict, Any
 from gravel_bot.scrapers.base import BaseScraper
-from gravel_bot.config import DEFAULT_HEADERS
+from gravel_bot.config import DEFAULT_HEADERS, RIDER_PROFILE
 
-# Coordenadas geográficas de Madrid centro
-MADRID_CENTRO_LAT = "40.4168"
-MADRID_CENTRO_LON = "-3.7038"
-RADIO_BUSQUEDA_METROS = "25000" # 25 km a la redonda
+CITY_COORDINATES = {
+    "madrid": ("40.4168", "-3.7038"),
+    "barcelona": ("41.3879", "2.1699"),
+    "valencia": ("39.4699", "-0.3763"),
+    "sevilla": ("37.3891", "-5.9845"),
+    "zaragoza": ("41.6488", "-0.8891"),
+    "malaga": ("36.7213", "-4.4214"),
+    "málaga": ("36.7213", "-4.4214"),
+    "bilbao": ("43.2630", "-2.9350"),
+    "alicante": ("38.3452", "-0.4810"),
+    "cordoba": ("37.8882", "-4.7794"),
+    "córdoba": ("37.8882", "-4.7794"),
+    "valladolid": ("41.6523", "-4.7245"),
+    "vigo": ("42.2406", "-8.7207"),
+    "gijon": ("43.5322", "-5.6611"),
+    "gijón": ("43.5322", "-5.6611"),
+    "coruña": ("43.3623", "-8.4115"),
+    "granada": ("37.1773", "-3.5986"),
+}
+RADIO_BUSQUEDA_METROS = "25000"  # 25 km a la redonda
 
 class WallapopMadridScraper(BaseScraper):
-    name = "wallapop_madrid"
+    name = "wallapop"
     store_slug = "wallapop_madrid"
-    store_name = "Wallapop (Particulares Madrid 25km)"
+    store_name = "Wallapop (Segunda Mano)"
     store_type = "segunda_mano"
     base_url = "https://es.wallapop.com"
 
     def scrape(self) -> List[Dict[str, Any]]:
         """
-        Consulta la búsqueda de bicicletas gravel en Madrid a través de la API pública de búsqueda de Wallapop.
+        Consulta la búsqueda de bicicletas gravel en Wallapop según la ubicación configurada.
         """
         results: List[Dict[str, Any]] = []
+        zona = RIDER_PROFILE.get("zona", "Madrid").strip().lower()
+        coords = None
+        for city, c_latlon in CITY_COORDINATES.items():
+            if city in zona:
+                coords = c_latlon
+                break
         keywords = ["bicicleta gravel", "gravel shimano grx", "gravel talla s"]
 
         headers = dict(DEFAULT_HEADERS)
@@ -37,13 +59,14 @@ class WallapopMadridScraper(BaseScraper):
         for kw in keywords:
             params = {
                 "keywords": kw,
-                 "latitude": MADRID_CENTRO_LAT,
-                 "longitude": MADRID_CENTRO_LON,
-                "distance": RADIO_BUSQUEDA_METROS,
                 "category_ids": "12465", # Ciclismo
                 "min_sale_price": "400",
                 "max_sale_price": "2200"
             }
+            if coords:
+                params["latitude"] = coords[0]
+                params["longitude"] = coords[1]
+                params["distance"] = RADIO_BUSQUEDA_METROS
             query_str = urllib.parse.urlencode(params)
             api_url = f"https://api.wallapop.com/api/v3/general/search?{query_str}"
 
@@ -73,7 +96,7 @@ class WallapopMadridScraper(BaseScraper):
                             "price": price,
                             "pvp": price * 1.35, # Estimación de PVP original
                             "url": url,
-                            "description": f"[Segunda Mano Madrid] {desc[:250]}",
+                            "description": f"[Segunda Mano] {desc[:250]}",
                             "sizes": [s for s in ["XS", "S", "M", "48", "51", "52", "54"] if s.lower() in full_lower],
                             "tienda_slug": self.store_slug
                         })
