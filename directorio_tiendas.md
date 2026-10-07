@@ -1,5 +1,5 @@
 # Directorio Integral de 50 Tiendas y Portales de Ciclismo
-*Base Operativa: Méndez Álvaro, Madrid | Perfil: 1ª Bici Gravel Mixta 50/50 | Estatura: 1,69 m (Talla S/XS)*
+*Base Operativa: Madrid | Perfil: 1ª Bici Gravel Mixta 50/50 | Estatura: 1,69 m (Talla S/XS)*
 
 Este directorio clasifica y documenta **50 tiendas físicas, plataformas online, outlets directos de fabricante y marketplaces** rastreados por el bot para la compra de tu bicicleta de gravel en Madrid.
 
@@ -7,14 +7,13 @@ Este directorio clasifica y documenta **50 tiendas físicas, plataformas online,
 
 ## Índice Rápido del Directorio (50 Fuentes)
 
-* [1. Tiendas Físicas en Madrid (Méndez Álvaro y Cercanías - 15 Tiendas)](#1-tiendas-físicas-en-madrid-méndez-álvaro-y-cercanías)
-* [2. Grandes Tiendas Nacionales y Outlets Online en España (15 Tiendas)](#2-grandes-tiendas-nacionales-y-outlets-online-en-españa)
+* [1. Tiendas Físicas en Madrid (15 Tiendas)](#1-tiendas-físicas-en-madrid)
 * [3. Gigantes Europeos de Ciclismo con Envío a España (12 Tiendas)](#3-gigantes-europeos-de-ciclismo-con-envío-a-españa)
 * [4. Mercados de Segunda Mano Certificada, Reacondicionadas y Chollos (8 Plataformas)](#4-mercados-de-segunda-mano-certificada-reacondicionadas-y-chollos)
 
 ---
 
-## 1. Tiendas Físicas en Madrid (Méndez Álvaro y Cercanías)
+## 1. Tiendas Físicas en Madrid
 
 ### 1.1 Sanferbike M-30 (Puente de Vallecas) — *Prioridad #1 Máxima*
 * **Ubicación:** Calle Lozano, 2, 28053 Madrid.

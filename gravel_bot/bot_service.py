@@ -43,9 +43,14 @@ def register_bot_commands():
         {"command": "presupuesto", "description": "💰 Ajustar presupuesto (ej: /presupuesto 1000)"},
         {"command": "biplato", "description": "⚙️ Filtrar sólo bicis de doble plato (2x)"},
         {"command": "monoplato", "description": "⚙️ Filtrar sólo bicis monoplato (1x)"},
-        {"command": "hidraulicos", "description": "🛑 Filtrar bicis con frenos hidráulicos"},
+        {"command": "ubicacion", "description": "📍 Cambiar tu ciudad/zona (ej: /ubicacion Madrid)"},
         {"command": "holgura", "description": "🎯 Margen para chollos (ej: /holgura 15)"},
         {"command": "transmision", "description": "⚙️ Preferencia 1x / 2x / indiferente"},
+        {"command": "desarrollo", "description": "⚙️ Simulador de cadencia y velocidades (ej: /desarrollo 2x)"},
+        {"command": "vs", "description": "⚔️ Comparativa 1v1 entre dos bicis (ej: /vs kalima jakar)"},
+        {"command": "avisatalla", "description": "🔔 Alerta de reposición de talla (ej: /avisatalla kalima SM)"},
+        {"command": "alertas", "description": "📋 Ver o cancelar tus alertas de reposición"},
+        {"command": "ocasion", "description": "♻️ Ver bicis de ocasión certificada / 2ª mano"},
         {"command": "add", "description": "📥 Analizar bici pegando una URL"},
     ]
     try:
@@ -104,12 +109,11 @@ def send_reply(chat_id: int, text: str):
 def get_profile_for_chat(chat_id: int, username: str = "") -> Dict[str, Any]:
     """Obtiene o inicializa el perfil de ciclista asociado a este chat_id."""
     init_db()
-    user_id = get_or_create_user(chat_id, username)
-    prof = get_user_profile(user_id)
+    prof = get_user_profile(chat_id)
     if not prof:
-        # Perfil por defecto (Sergio / Méndez Álvaro 1,69m)
-        update_user_profile(user_id, estatura_cm=169, presupuesto_max=1350.0, preferencia_transmision="2x")
-        prof = get_user_profile(user_id)
+        get_or_create_user(chat_id, username)
+        update_user_profile(chat_id, estatura_cm=169, presupuesto_max=1350.0, preferencia_transmision="2x")
+        prof = get_user_profile(chat_id)
     return dict(prof) if prof else {
         "estatura_cm": 169, "talla_calculada": "S", "presupuesto_max": 1350.0,
         "preferencia_transmision": "2x", "terreno_asfalto_pct": 50
@@ -140,8 +144,8 @@ def format_profile_message(chat_id: int, username: str = "") -> str:
     msg += f" • <b>Presupuesto Base:</b> {bud} €\n"
     msg += f" • <b>Holgura para Chollazos:</b> +{int(holgura)}% (Hasta <b>{tope_holgura} €</b> si la oferta lo justifica)\n"
     msg += f" • <b>Transmisión preferida:</b> {trans}\n"
+    msg += f" • <b>Ubicación / Zona:</b> {prof.get('zona', 'Madrid')}\n"
     msg += f" • <b>Uso declarado:</b> 50% Asfalto / 50% Tierra\n\n"
-
     msg += "📐 <b>Tallas Exactas Recomendadas por Fabricante:</b>\n"
     msg += f" • <b>Canyon</b> (Grizl/Grail): <b>{canyon_s}</b> <i>(talla grande)</i>\n"
     msg += f" • <b>Focus</b> (ATLAS): <b>{focus_s}</b> <i>(geometría larga)</i>\n"
@@ -157,9 +161,9 @@ def format_profile_message(chat_id: int, username: str = "") -> str:
     msg += " • <code>/presupuesto 1000</code> (Cambiar tope de precio base)\n"
     msg += " • <code>/holgura 15</code> (Margen extra % si el chollo lo merece)\n"
     msg += " • <code>/transmision 1x</code> (o <code>/transmision 2x</code>)\n"
+    msg += " • <code>/ubicacion Madrid</code> (Cambiar tu ciudad o zona)\n"
     msg += " • <code>/validar</code> (Auditar enlaces y recalcular tallas en vivo)"
     return msg
-
 def format_tier_list_message(chat_id: Optional[int] = None) -> str:
     """Genera un resumen formateado del Tier list adaptado al perfil del usuario."""
     init_db()
@@ -268,9 +272,8 @@ def _process_message(msg: Dict[str, Any]):
             "He configurado automáticamente tu <b>Perfil de Ciclista</b> para cazar la gravel ideal:\n"
             f" • 📏 <b>Estatura:</b> <code>{h} cm</code> (Talla base calculada: <b>{prof['talla_calculada']}</b>)\n"
             f" • 💰 <b>Presupuesto Objetivo:</b> <code>{bud} €</code> (Hasta <b>{tope} €</b> con holgura para chollazos)\n"
-            f" • 📍 <b>Ubicación:</b> Méndez Álvaro / Madrid Río (Prioridad tiendas físicas cercanas)\n"
+            f" • 📍 <b>Ubicación:</b> Madrid (Prioridad tiendas físicas y envíos)\n"
             f" • 🧭 <b>Uso:</b> 50% Asfalto / 50% Pista y Tierra\n\n"
-            "🧠 <b>¿CÓMO TE AYUDO A ELEGIR?</b>\n"
             "1. <b>Tallaje Biomecánico Dinámico:</b> Cada fabricante talla diferente. Calculo tu talla exacta según la geometría real (ej. Canyon XS, Focus 48, Conor SM, Megamo S, Trek 52).\n"
             "2. <b>Rastreo Multi-Tienda en Madrid y Online:</b> Monitorizo 14 tiendas físicas y outlets (Sanferbike M-30, Calmera Atocha, Fabregues, Mammoth, Chollometro...).\n"
             "3. <b>Historial de Precios:</b> Registro caídas y subidas de precio para detectar auténticas gangas.\n\n"
@@ -279,7 +282,7 @@ def _process_message(msg: Dict[str, Any]):
             " • 🚲 <b>/catalogo</b>: Ver todas las bicicletas disponibles en stock actualmente.\n"
             " • 📄 <code>/ficha [modelo]</code>: Ficha técnica con componentes, dónde comprarla y distancia (ej: <code>/ficha Kalima</code> o <code>/ficha Jakar</code>).\n"
             " • 💥 <code>/chollazos [máx €]</code>: Gangas ordenadas por % de descuento (ej: <code>/chollazos 1200</code> o <code>/chollazos 30%</code>).\n"
-            " • 📍 <b>/tiendas</b>: Tiendas físicas recomendadas para ver y probar talla desde Méndez Álvaro.\n"
+            " • 📍 <b>/tiendas</b>: Tiendas físicas recomendadas en Madrid.\n"
             " • 📈 <code>/historial [modelo]</code>: Evolución histórica de precios de un modelo.\n"
             " • 📊 <b>/stats</b>: Estadísticas globales del catálogo y tiendas.\n"
             " • 📥 <code>/add [URL]</code>: Pega cualquier enlace de una bici para analizarla al instante.\n\n"
@@ -363,6 +366,80 @@ def _process_message(msg: Dict[str, Any]):
             send_reply(chat_id, f"✅ <b>Preferencia de transmisión guardada: {val}</b>.")
         else:
             send_reply(chat_id, "ℹ️ Opciones válidas: <code>/transmision 2x</code>, <code>/transmision 1x</code> o <code>/transmision indiferente</code>")
+    elif any(text.startswith(cmd) for cmd in ["/ubicacion", "/zona", "/localizacion", "/ciudad"]):
+        parts = raw_text.split(maxsplit=1)
+        if len(parts) > 1 and parts[1].strip():
+            nueva_zona = parts[1].strip()
+            user_id = get_or_create_user(chat_id, username)
+            update_user_profile(user_id, zona=nueva_zona)
+            send_reply(chat_id, f"✅ <b>Ubicación actualizada:</b> <code>{nueva_zona}</code>.\n\nTus búsquedas y recomendaciones se adaptarán a tu zona.")
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/ubicacion Madrid</code> (o <code>/ubicacion Barcelona</code>, <code>/ubicacion Valencia</code>, etc.)")
+    elif any(text.startswith(cmd) for cmd in ["/desarrollo", "/cadencia", "/velocidad"]):
+        parts = raw_text.split(maxsplit=1)
+        sub = parts[1].strip() if len(parts) > 1 else "2x"
+        from gravel_bot.gear_calculator import format_gear_simulation_message
+        send_reply(chat_id, format_gear_simulation_message(sub))
+    elif any(text.startswith(cmd) for cmd in ["/vs", "/comparar", "vs "]):
+        clean = raw_text.strip()
+        for c in ["/vs", "/comparar"]:
+            if clean.lower().startswith(c):
+                clean = clean[len(c):].strip()
+                break
+        if " vs " in clean.lower():
+            p1, p2 = [x.strip() for x in clean.lower().split(" vs ", 1)]
+        else:
+            tokens = clean.split()
+            if len(tokens) >= 2:
+                p1, p2 = tokens[0], " ".join(tokens[1:])
+            else:
+                p1, p2 = None, None
+
+        if p1 and p2:
+            from gravel_bot.bike_inspector import format_bike_comparison_message
+            prof = get_profile_for_chat(chat_id, username)
+            h = prof.get("estatura_cm", 169)
+            send_reply(chat_id, format_bike_comparison_message(p1, p2, estatura_cm=h))
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/vs [bici1] [bici2]</code>\nEjemplos:\n • <code>/vs kalima jakar</code>\n • <code>/vs conor raymon</code>\n • <code>/vs 1 2</code>")
+    elif any(text.startswith(cmd) for cmd in ["/avisatalla", "/alertatalla"]):
+        parts = raw_text.split()
+        if len(parts) >= 3:
+            mod_query = parts[1].strip()
+            size_query = parts[2].strip().upper()
+            from gravel_bot.db import add_size_alert, get_or_create_user
+            user_id = get_or_create_user(chat_id, username)
+            aid = add_size_alert(user_id, mod_query, size_query)
+            send_reply(chat_id, f"🔔 <b>Alerta #{aid} activada:</b>\nTe avisaré en Telegram en el instante en que detectemos reposición de stock de <b>{mod_query.title()}</b> en talla <b>{size_query}</b>.\n\nPuedes ver tus alertas activas con <code>/alertas</code>.")
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/avisatalla [modelo] [talla]</code>\nEjemplos:\n • <code>/avisatalla kalima SM</code>\n • <code>/avisatalla jakar S</code>\n • <code>/avisatalla grizl XS</code>")
+
+    elif any(text.startswith(cmd) for cmd in ["/alertas", "/misalertas"]):
+        from gravel_bot.db import get_user_size_alerts, get_or_create_user
+        user_id = get_or_create_user(chat_id, username)
+        alerts = get_user_size_alerts(user_id)
+        if not alerts:
+            send_reply(chat_id, "ℹ️ No tienes alertas de reposición activas.\nCrea una escribiendo por ejemplo: <code>/avisatalla kalima SM</code>")
+        else:
+            msg = "📋 <b>TUS ALERTAS DE REPOSICIÓN ACTIVAS</b> 📋\n\n"
+            for a in alerts:
+                msg += f" • <b>#{a['id']}</b>: <b>{a['termino_modelo'].title()}</b> en talla <b>{a['talla_deseada']}</b> (Creada: {a['fecha_creacion'][:10]})\n"
+                msg += f"   Para cancelar: <code>/borraralerta {a['id']}</code>\n\n"
+            send_reply(chat_id, msg)
+
+    elif any(text.startswith(cmd) for cmd in ["/borraralerta", "/cancelaralerta", "/delalerta"]):
+        parts = raw_text.split()
+        if len(parts) >= 2 and parts[1].isdigit():
+            aid = int(parts[1])
+            from gravel_bot.db import delete_size_alert, get_or_create_user
+            user_id = get_or_create_user(chat_id, username)
+            ok = delete_size_alert(aid, user_id)
+            if ok:
+                send_reply(chat_id, f"✅ Alerta #{aid} cancelada correctamente.")
+            else:
+                send_reply(chat_id, f"⚠️ No se encontró la alerta #{aid} o ya estaba desactivada.")
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/borraralerta [ID]</code> (ej: <code>/borraralerta 1</code>)")
 
     elif text in ["/validar", "/validate", "/audit", "validar"]:
         send_reply(chat_id, "🩺 <i>Iniciando validación automática de enlaces, precios en vivo y tallas dinámicas...</i>")
@@ -429,6 +506,12 @@ def _process_message(msg: Dict[str, Any]):
             msg += f"   💰 <b>{oferta} €</b>{ahorro_str} | Talla calculada: <b>{b['talla_recomendada_169']}</b>\n"
             msg += f"   ⚙️ {b['transmision']} | {b['frenos']}\n\n"
         send_reply(chat_id, msg)
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/ocasion", "/segundamano", "/reacondicionadas", "ocasion"]):
+        parts = raw_text.split()
+        max_p = float(parts[1]) if len(parts) > 1 and parts[1].replace(".", "").isdigit() else None
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(store_type="segunda_mano_certificada", max_price=max_p))
+
 
     elif text in ["/scan", "scan", "buscar"]:
         send_reply(chat_id, "⏳ <i>Iniciando escaneo de tiendas en vivo... Esto tomará unos segundos.</i>")

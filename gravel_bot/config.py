@@ -19,8 +19,7 @@ RIDER_PROFILE = {
         "canyon": ["XS", "48"], # Canyon talla muy grande
         "focus": ["XS", "48"],  # Focus talla muy grande
     },
-    "zona": "Méndez Álvaro (Arganzuela / Retiro Sur, Madrid)",
-    "uso": "50% Asfalto / 50% Pista y Grava",
+    "zona": "Madrid",
     "presupuesto_objetivo": 1000.0,
     "presupuesto_max_justificado": 1350.0,
 }

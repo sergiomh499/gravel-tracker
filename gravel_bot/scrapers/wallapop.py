@@ -11,9 +11,9 @@ from typing import List, Dict, Any
 from gravel_bot.scrapers.base import BaseScraper
 from gravel_bot.config import DEFAULT_HEADERS
 
-# Coordenadas geográficas de Méndez Álvaro, Madrid
-MADRID_MENDEZ_ALVARO_LAT = "40.3954"
-MADRID_MENDEZ_ALVARO_LON = "-3.6787"
+# Coordenadas geográficas de Madrid centro
+MADRID_CENTRO_LAT = "40.4168"
+MADRID_CENTRO_LON = "-3.7038"
 RADIO_BUSQUEDA_METROS = "25000" # 25 km a la redonda
 
 class WallapopMadridScraper(BaseScraper):
@@ -37,8 +37,8 @@ class WallapopMadridScraper(BaseScraper):
         for kw in keywords:
             params = {
                 "keywords": kw,
-                "latitude": MADRID_MENDEZ_ALVARO_LAT,
-                "longitude": MADRID_MENDEZ_ALVARO_LON,
+                 "latitude": MADRID_CENTRO_LAT,
+                 "longitude": MADRID_CENTRO_LON,
                 "distance": RADIO_BUSQUEDA_METROS,
                 "category_ids": "12465", # Ciclismo
                 "min_sale_price": "400",

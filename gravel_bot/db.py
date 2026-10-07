@@ -119,7 +119,7 @@ def init_db():
         holgura_max_pct REAL NOT NULL DEFAULT 15.0, -- % margen extra para chollos excepcionales
         preferencia_transmision TEXT DEFAULT '2x', -- '2x', '1x', 'indiferente'
         terreno_asfalto_pct INTEGER DEFAULT 50,    -- 50% asfalto / 50% tierra
-        zona TEXT DEFAULT 'Méndez Álvaro, Madrid',
+        zona TEXT DEFAULT 'Madrid',
         alertas_activas INTEGER DEFAULT 1,
         nota_minima_alerta REAL DEFAULT 8.5
     );
@@ -138,6 +138,17 @@ def init_db():
         bicicleta_id INTEGER REFERENCES bicicletas(id),
         precio_notificado REAL NOT NULL,
         fecha_notificacion TEXT NOT NULL
+    );
+    """)
+    # Tabla alertas_talla_usuario (notificaciones de reposición de talla específica)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS alertas_talla_usuario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER REFERENCES usuarios(id),
+        termino_modelo TEXT NOT NULL,
+        talla_deseada TEXT NOT NULL,
+        activa INTEGER DEFAULT 1,
+        fecha_creacion TEXT NOT NULL
     );
     """)
 
@@ -403,31 +414,50 @@ def get_or_create_user(chat_id: int, username: Optional[str] = None) -> int:
         INSERT INTO perfiles_ciclista (
             usuario_id, estatura_cm, talla_calculada, presupuesto_max,
             preferencia_transmision, terreno_asfalto_pct, zona, alertas_activas, nota_minima_alerta
-        ) VALUES (?, 169, 'S', 1350.0, '2x', 50, 'Méndez Álvaro, Madrid', 1, 8.5)
+        ) VALUES (?, 169, 'S', 1350.0, '2x', 50, 'Madrid', 1, 8.5)
         """, (user_id,))
         conn.commit()
 
     conn.close()
     return user_id
 
-def get_user_profile(chat_id: int) -> Optional[sqlite3.Row]:
-    """Obtiene el perfil de ciclista asociado a un chat_id de Telegram."""
-    user_id = get_or_create_user(chat_id)
+def get_user_profile(chat_id_or_user_id: int) -> Optional[sqlite3.Row]:
+    """Obtiene el perfil de ciclista por telegram_chat_id o por usuario_id interno."""
     conn = get_connection()
     c = conn.cursor()
     c.execute("""
     SELECT p.*, u.telegram_chat_id, u.telegram_username
     FROM perfiles_ciclista p
     JOIN usuarios u ON p.usuario_id = u.id
-    WHERE u.id = ?
-    """, (user_id,))
+    WHERE u.telegram_chat_id = ?
+    LIMIT 1
+    """, (chat_id_or_user_id,))
     row = c.fetchone()
-    conn.close()
+    if not row:
+        c.execute("""
+        SELECT p.*, u.telegram_chat_id, u.telegram_username
+        FROM perfiles_ciclista p
+        JOIN usuarios u ON p.usuario_id = u.id
+        WHERE u.id = ?
+        LIMIT 1
+        """, (chat_id_or_user_id,))
+        row = c.fetchone()
     return row
 
-def update_user_profile(chat_id: int, **kwargs) -> Optional[sqlite3.Row]:
-    """Actualiza campos específicos del perfil ciclista de un usuario."""
-    user_id = get_or_create_user(chat_id)
+def update_user_profile(chat_id_or_user_id: int, **kwargs) -> Optional[sqlite3.Row]:
+    """Actualiza campos específicos del perfil ciclista por telegram_chat_id o usuario_id."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT id FROM usuarios WHERE telegram_chat_id = ? LIMIT 1", (chat_id_or_user_id,))
+    u_row = c.fetchone()
+    if not u_row:
+        c.execute("SELECT id FROM usuarios WHERE id = ? LIMIT 1", (chat_id_or_user_id,))
+        u_row = c.fetchone()
+    conn.close()
+    if u_row:
+        user_id = u_row[0]
+    else:
+        user_id = get_or_create_user(chat_id_or_user_id)
     if "estatura_cm" in kwargs and "talla_calculada" not in kwargs:
         from gravel_bot.evaluator import calcular_talla_desde_estatura
         kwargs["talla_calculada"] = calcular_talla_desde_estatura(kwargs["estatura_cm"])
@@ -443,8 +473,7 @@ def update_user_profile(chat_id: int, **kwargs) -> Optional[sqlite3.Row]:
             params.append(v)
 
     if not updates:
-        return get_user_profile(chat_id)
-
+        return get_user_profile(chat_id_or_user_id)
     params.append(user_id)
     conn = get_connection()
     c = conn.cursor()
@@ -452,8 +481,7 @@ def update_user_profile(chat_id: int, **kwargs) -> Optional[sqlite3.Row]:
     c.execute(query, params)
     conn.commit()
     conn.close()
-    return get_user_profile(chat_id)
-
+    return get_user_profile(chat_id_or_user_id)
 def get_all_active_profiles() -> List[sqlite3.Row]:
     """Devuelve todos los perfiles de usuarios con alertas activas para el pipeline de escaneo."""
     conn = get_connection()
@@ -490,3 +518,42 @@ def mark_alert_sent_to_user(usuario_id: int, bike_id: int, price: float):
     """, (usuario_id, bike_id, price, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     conn.commit()
     conn.close()
+
+def add_size_alert(user_id: int, model_term: str, size: str) -> int:
+    """Crea una alerta de reposición de talla para un modelo concreto."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO alertas_talla_usuario (usuario_id, termino_modelo, talla_deseada, activa, fecha_creacion)
+    VALUES (?, ?, ?, 1, ?)
+    """, (user_id, model_term.strip().lower(), size.strip().upper(), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    alert_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return alert_id
+
+def get_user_size_alerts(user_id: int) -> List[sqlite3.Row]:
+    """Obtiene las alertas activas de talla para un usuario."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT * FROM alertas_talla_usuario
+    WHERE usuario_id = ? AND activa = 1
+    ORDER BY id DESC
+    """, (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def delete_size_alert(alert_id: int, user_id: int) -> bool:
+    """Desactiva una alerta de reposición de talla."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    UPDATE alertas_talla_usuario SET activa = 0
+    WHERE id = ? AND usuario_id = ?
+    """, (alert_id, user_id))
+    affected = c.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected

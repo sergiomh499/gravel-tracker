@@ -106,7 +106,7 @@ def format_detailed_bike_card(identifier: Any) -> str:
     msg += "📍 <b>DÓNDE COMPRARLA & PRECIO ACTUALIZADO:</b>\n"
     msg += f" • <b>Comercio:</b> {link_tienda} ({tipo_tienda.capitalize()})\n"
     if dir_tienda:
-        dist_str = f" (~{distancia} km de Méndez Álvaro)" if distancia else ""
+        dist_str = f" (~{distancia} km)" if distancia else ""
         msg += f" • <b>Dirección Física:</b> {dir_tienda}{dist_str}\n"
     if url:
         msg += f" • <b>Enlace Directo:</b> <a href='{url}'>Ver Oferta en Web</a>\n"
@@ -226,7 +226,8 @@ def get_available_bikes_list(
     brand: Optional[str] = None,
     transmission: Optional[str] = None,
     brakes: Optional[str] = None,
-    size: Optional[str] = None
+    size: Optional[str] = None,
+    store_type: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Recupera todas las bicicletas disponibles en stock que cumplan con los filtros.
@@ -270,6 +271,14 @@ def get_available_bikes_list(
 
     if size:
         query += " AND b.talla_recomendada_169 != 'No compatible'"
+    if store_type:
+        st_low = store_type.lower().strip()
+        if any(w in st_low for w in ["ocasion", "cert", "reacond", "segunda"]):
+            query += " AND t.tipo IN ('ocasion_certificada', 'segunda_mano_certificada', 'segunda_mano')"
+        else:
+            query += " AND t.tipo = ?"
+            params.append(store_type)
+
 
     query += " ORDER BY b.nota DESC, b.precio_oferta ASC"
     c.execute(query, tuple(params))
@@ -283,7 +292,8 @@ def format_available_bikes_message(
     brand: Optional[str] = None,
     transmission: Optional[str] = None,
     brakes: Optional[str] = None,
-    size: Optional[str] = None
+    size: Optional[str] = None,
+    store_type: Optional[str] = None
 ) -> str:
     """
     Formatea la lista de bicicletas disponibles en stock para consulta rápida.
@@ -294,7 +304,8 @@ def format_available_bikes_message(
         brand=brand,
         transmission=transmission,
         brakes=brakes,
-        size=size
+        size=size,
+        store_type=store_type
     )
     if not bikes:
         return "ℹ️ No se encontraron bicicletas disponibles en stock con los filtros indicados."
@@ -335,4 +346,66 @@ def format_available_bikes_message(
         msg += f"💡 <i>Hay {total_encontradas - len(bikes_mostradas)} modelos más en stock. Usa filtros como <code>/catalogo S+</code>, <code>/catalogo 1200</code> o <code>/chollazos</code> para afinar.</i>"
     else:
         msg += "💡 <i>Escribe <code>/ficha [nombre]</code> para ver componentes completos y dónde comprarla.</i>"
+    return msg
+
+def format_bike_comparison_message(query1: str, query2: str, estatura_cm: int = 169) -> str:
+    """Genera una comparación directa 1v1 frente a frente entre dos bicicletas."""
+    b1 = get_detailed_bike_info(query1)
+    b2 = get_detailed_bike_info(query2)
+    if not b1 or not b2:
+        missing = []
+        if not b1:
+            missing.append(f"'{query1}'")
+        if not b2:
+            missing.append(f"'{query2}'")
+        return f"⚠️ No se encontró en el catálogo: {', '.join(missing)}.\nPrueba con: <code>/vs kalima jakar</code> o <code>/vs raymon x-grip</code>"
+    from gravel_bot.geometry_sizing import get_recommended_size_dynamic
+    talla1 = get_recommended_size_dynamic(b1["marca"], b1["modelo"], estatura_cm)["talla_recomendada"]
+    talla2 = get_recommended_size_dynamic(b2["marca"], b2["modelo"], estatura_cm)["talla_recomendada"]
+
+    msg = f"⚔️ <b>COMPARATIVA 1v1 FRENTE A FRENTE</b> ⚔️\n\n"
+    msg += f"🅰️ <b>{b1['marca']} {b1['modelo']}</b>\n"
+    msg += f" • <b>Precio:</b> {int(b1['precio_oferta'])} € (PVP: {int(b1.get('precio_pvp') or b1['precio_oferta'])} €)\n"
+    msg += f" • <b>Tier / Nota:</b> {b1['tier']} | <b>{b1['nota']}/10</b>\n"
+    msg += f" • <b>Transmisión:</b> {b1['transmision']}\n"
+    msg += f" • <b>Frenos:</b> {b1['frenos']}\n"
+    msg += f" • <b>Talla para {estatura_cm} cm:</b> <b>{talla1}</b>\n\n"
+
+    msg += f"🅱️ <b>{b2['marca']} {b2['modelo']}</b>\n"
+    msg += f" • <b>Precio:</b> {int(b2['precio_oferta'])} € (PVP: {int(b2.get('precio_pvp') or b2['precio_oferta'])} €)\n"
+    msg += f" • <b>Tier / Nota:</b> {b2['tier']} | <b>{b2['nota']}/10</b>\n"
+    msg += f" • <b>Transmisión:</b> {b2['transmision']}\n"
+    msg += f" • <b>Frenos:</b> {b2['frenos']}\n"
+    msg += f" • <b>Talla para {estatura_cm} cm:</b> <b>{talla2}</b>\n\n"
+
+    msg += "🎯 <b>DUELO TÉCNICO:</b>\n"
+    # Duelo transmisión
+    t1_lower = b1['transmision'].lower()
+    t2_lower = b2['transmision'].lower()
+    if "2x" in t1_lower and "1x" in t2_lower:
+        msg += f" • <b>Asfalto (50%):</b> Gana 🅰️ ({b1['marca']}) por biplato 2x con saltos cerrados.\n"
+        msg += f" • <b>Pista / Baches (50%):</b> Gana 🅱️ ({b2['marca']}) por simplicidad y retención 1x.\n"
+    elif "1x" in t1_lower and "2x" in t2_lower:
+        msg += f" • <b>Asfalto (50%):</b> Gana 🅱️ ({b2['marca']}) por biplato 2x con saltos cerrados.\n"
+        msg += f" • <b>Pista / Baches (50%):</b> Gana 🅰️ ({b1['marca']}) por simplicidad y retención 1x.\n"
+    else:
+        msg += f" • <b>Transmisión:</b> Ambas montan arquitectura similar ({b1['transmision'][:25]} vs {b2['transmision'][:25]}).\n"
+
+    # Duelo frenos
+    h1 = "hidr" in b1['frenos'].lower()
+    h2 = "hidr" in b2['frenos'].lower()
+    if h1 and not h2:
+        msg += f" • <b>Frenada:</b> 🅰️ Gana con contundencia (Hidráulicos vs Mecánicos en 🅱️).\n"
+    elif not h1 and h2:
+        msg += f" • <b>Frenada:</b> 🅱️ Gana con contundencia (Hidráulicos vs Mecánicos en 🅰️).\n"
+
+    # Diferencia precio
+    diff_p = b1['precio_oferta'] - b2['precio_oferta']
+    if diff_p < 0:
+        msg += f" • <b>Diferencia:</b> 🅰️ es {int(abs(diff_p))} € más barata.\n"
+    elif diff_p > 0:
+        msg += f" • <b>Diferencia:</b> 🅱️ es {int(diff_p)} € más barata.\n"
+
+    ganador = b1['marca'] if b1['nota'] >= b2['nota'] else b2['marca']
+    msg += f"\n🏆 <b>Veredicto Global:</b> Por balance general recomendamos <b>{ganador}</b>."
     return msg

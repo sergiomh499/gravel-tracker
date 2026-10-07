@@ -1,5 +1,5 @@
 # Directorio y Fichas Técnicas de Bicicletas Gravel Evaluadas
-*Perfil de Evaluación:* 1ª Bici Gravel | 50% Asfalto / 50% Tierra | Madrid (Méndez Álvaro) | Estatura: 1,69 m (Talla S/SM)
+*Perfil de Evaluación:* 1ª Bici Gravel | 50% Asfalto / 50% Tierra | Madrid | Estatura: 1,69 m (Talla S/SM)
 
 ---
 
@@ -157,8 +157,7 @@
 * **Frenos:** Disco hidráulicos Shimano GRX BR-RX400 (160 mm delantero y trasero).
 * **Ruedas y Cubiertas:** Continental Terra Trail 700x40c Tubeless Ready.
 * **Tu Talla:** **S**.
-* **Precio:** **1.399 €** (PVP 1.499 €) en Decathlon Usera (C/ Antonio López, a 10 min en bici de Méndez Álvaro).
-* **Puntuación Rúbrica:** C1: 25 | C2: 25 | C3: 17 | C4: 14 | C5: 10 $\to$ **91 / 100 (Nota: 9.1)**.
+* **Precio:** **1.399 €** (PVP 1.499 €) en Decathlon Usera (C/ Antonio López, Madrid).
 * **Veredicto:** Un descubrimiento de primera línea. Tener el último grupo GRX 2x12v con la política de 60 días de prueba y garantía local de Decathlon.
 
 ---
@@ -273,8 +272,7 @@
 * **Frenos:** Pinzas **semi-hidráulicas TRP HY/RD** con discos de 160 mm (pistones hidráulicos accionados por cable).
 * **Cubiertas:** 700x28c/32c de serie (paso de rueda verificado hasta 700x38c para tierra compacta).
 * **Tu Talla:** **S (51 cm)**.
-* **Precio:** **899 €** *(PVP 999 €)* en Decathlon Usera / Madrid Río (a 2,5 km de Méndez Álvaro).
-* **Puntuación Rúbrica:** C1: 16 | C2: 25 | C3: 18 | C4: 19 | C5: 10 $\to$ **88 / 100 (Nota: 8.8)**.
+* **Precio:** **899 €** *(PVP 999 €)* en Decathlon Usera / Madrid Río (Madrid).
 * **Veredicto:** Imbatible para el 50% de asfalto en Madrid por 899 €. Monta grupo completo Shimano 105 de 22 velocidades y pinzas de doble pistón hidráulico TRP HY/RD.
 
 ---

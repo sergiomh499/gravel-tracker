@@ -127,3 +127,45 @@ def format_bike_price_history_message(query: str) -> str:
         prev_price = p
 
     return msg
+
+def check_and_notify_size_alerts(bike: Dict[str, Any]) -> List[int]:
+    """Comprueba si una bicicleta en stock coincide con alertas de talla pendientes de usuarios."""
+    if not bike.get("en_stock"):
+        return []
+    modelo = (bike.get("modelo") or "").lower()
+    marca = (bike.get("marca") or "").lower()
+    talla_bici = str(bike.get("talla_recomendada_169") or "").upper()
+    nombre_completo = f"{marca} {modelo}"
+
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT a.id, a.usuario_id, a.termino_modelo, a.talla_deseada, u.telegram_chat_id
+    FROM alertas_talla_usuario a
+    JOIN usuarios u ON a.usuario_id = u.id
+    WHERE a.activa = 1 AND u.activo = 1
+    """)
+    alerts = c.fetchall()
+    notified_users = []
+    for a in alerts:
+        term = a["termino_modelo"].lower()
+        desired_size = a["talla_deseada"].upper()
+        if term in nombre_completo:
+            if desired_size in talla_bici or talla_bici.startswith(desired_size):
+                chat_id = a["telegram_chat_id"]
+                if chat_id:
+                    from gravel_bot.bot_service import send_reply
+                    msg = (
+                        f"🚨 <b>¡REPOSICIÓN DETECTADA DE TU TALLA!</b> 🚨\n\n"
+                        f"Hemos detectado disponibilidad de <b>{bike.get('marca', '')} {bike.get('modelo', '')}</b> en tu talla buscada (<b>{desired_size}</b>)!\n\n"
+                        f" • <b>Precio:</b> {int(bike['precio_oferta'])} €\n"
+                        f" • <b>Enlace:</b> <a href='{bike.get('url_oferta', '')}'>Ir a la Oferta Directa</a>\n\n"
+                        f"<i>Para desactivar esta alerta escribe: <code>/borraralerta {a['id']}</code></i>"
+                    )
+                    try:
+                        send_reply(chat_id, msg)
+                        notified_users.append(a["usuario_id"])
+                    except Exception as e:
+                        print(f"Error notificando alerta de talla: {e}")
+    conn.close()
+    return notified_users
