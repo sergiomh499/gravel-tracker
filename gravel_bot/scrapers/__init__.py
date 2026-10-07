@@ -15,6 +15,7 @@ from gravel_bot.scrapers.decathlon import DecathlonScraper
 from gravel_bot.scrapers.bicimarket import BicimarketScraper
 from gravel_bot.scrapers.canyon import CanyonOutletScraper
 from gravel_bot.scrapers.bicispasaje import BicispasajeScraper
+from gravel_bot.scrapers.multi_store import MultiStoreAggregatorScraper
 
 ACTIVE_SCRAPERS: List[BaseScraper] = [
     DecathlonScraper(),
@@ -28,6 +29,7 @@ ACTIVE_SCRAPERS: List[BaseScraper] = [
     WallapopMadridScraper(),
     OutletAggregatorScraper(),
     ChollometroScraper(),
+    MultiStoreAggregatorScraper(),
 ]
 
 def get_all_scrapers() -> List[BaseScraper]:
