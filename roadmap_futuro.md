@@ -187,11 +187,12 @@ Audita que cada bicicleta en la base de datos cumpla la integridad mínima de ca
 * Desde Telegram: comando `/validar`
 ---
 
-## 📅 Calendario de Implementación Recomendado
+## 📅 Estado de Implementación de los Sprints
 
-| Sprint | Hito | Entregables Clave |
-| :---: | :--- | :--- |
-| **Sprint 1** | **Base Multiusuario en Telegram** | Tablas `usuarios` y `perfiles`, comando `/perfil` interactivo y enrutamiento de alertas por `chat_id`. |
-| **Sprint 2** | **Desacople de la Matriz de Componentes** | Archivo `components_db.json`, motor de cálculo dinámico y actualización de componentes sin reiniciar el bot. |
-| **Sprint 3** | **Ampliación de Tiendas y Wallapop** | Scraper de Wallapop Madrid (filtro radio 25 km) y módulo Playwright para Buhobike / Decathlon. |
-| **Sprint 4** | **Simulador de Desarrollos y Biomecánica** | Inclusión de Gear Inches en los mensajes de alerta de Telegram y cálculo de ratio de subida. |
+| Sprint | Hito | Estado | Entregables Clave |
+| :---: | :--- | :---: | :--- |
+| **Sprint 1** | **Base Multiusuario en Telegram** | ✅ **Completado** | Tablas `usuarios` y `perfiles_ciclista`, `/perfil` interactivo con botones, tallaje dinámico y parsing natural de altura/presupuesto. |
+| **Sprint 2** | **Desacople de la Matriz de Componentes** | ✅ **Completado** | `components_db.json`, clase `KnowledgeBase`, reconocimiento automático de grupos y frenos con hot-reload. |
+| **Sprint 3** | **Ampliación de Tiendas y Segunda Mano** | ✅ **Completado** | 17 scrapers activos (Wallapop Madrid, Buycycle, Canyon Outlet, Decathlon, Sanferbike, Mammoth, etc.). |
+| **Sprint 4** | **Simulador Cinemático y Biomecánica** | ✅ **Completado** | `gear_calculator.py`, simulador cinemático a 75/90/105 rpm, desarrollos 1x/2x y comparativa 1v1 (`/vs`). |
+| **Sprint 5** | **Validador Continuo y Auto-Documentación** | ✅ **Completado** | `validator.py`, auditoría de 374 modelos, auto-reparación y sincronización de `directorio_bicicletas.md`. |
