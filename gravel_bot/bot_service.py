@@ -5,7 +5,7 @@ cálculo dinámico de talla por fabricante y validación automática de enlaces 
 """
 from __future__ import annotations
 import os
-import time
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 import json
@@ -61,9 +61,18 @@ def register_bot_commands():
             pass
     except Exception as e:
         print(f"⚠️ No se pudo registrar setMyCommands en Telegram: {e}")
+MAIN_KEYBOARD = {
+    "keyboard": [
+        [{"text": "🏆 Ver Mi Podio"}, {"text": "🔥 Chollos <1.000€"}],
+        [{"text": "⚙️ Biplato (2x)"}, {"text": "⚙️ Monoplato (1x)"}],
+        [{"text": "♻️ Ocasión con Garantía"}, {"text": "👤 Mi Perfil"}]
+    ],
+    "resize_keyboard": True,
+    "is_persistent": True
+}
 
-def send_reply(chat_id: int, text: str):
-    """Envía un mensaje formateado a Telegram con auto-chunking seguro (<3800 chars) y fallback a texto plano."""
+def send_reply(chat_id: int, text: str, reply_markup: Optional[Dict[str, Any]] = None):
+    """Envía un mensaje formateado a Telegram con auto-chunking seguro (<3800 chars) y teclado interactivo."""
     if not TELEGRAM_BOT_TOKEN or not text:
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -84,13 +93,15 @@ def send_reply(chat_id: int, text: str):
         if curr.strip():
             chunks.append(curr.strip())
 
-    for chunk in chunks[:4]:
+    for idx, chunk in enumerate(chunks[:4]):
         payload = {
             "chat_id": chat_id,
             "text": chunk,
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         }
+        if reply_markup and idx == len(chunks[:4]) - 1:
+            payload["reply_markup"] = reply_markup
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         try:
@@ -260,57 +271,93 @@ def _process_message(msg: Dict[str, Any]):
 
     print(f"📩 [TELEGRAM] Mensaje de @{username} ({chat_id}): '{raw_text}'")
 
-    if text in ["/start", "start"]:
+    if text in ["/start", "start", "hola", "buenas", "inicio", "empezar"]:
         prof = get_profile_for_chat(chat_id, username)
         h = prof["estatura_cm"]
         bud = int(prof["presupuesto_max"])
-        holgura = int(prof.get("holgura_max_pct", 15.0))
-        tope = int(bud * (1.0 + holgura / 100.0))
-
+        tope = int(bud * (1.0 + float(prof.get("holgura_max_pct", 15.0)) / 100.0))
         welcome = (
-            "🎉 <b>¡BIENVENIDO A TU GRAVEL ASSISTANT EN MADRID!</b> 🚲\n\n"
-            "He configurado automáticamente tu <b>Perfil de Ciclista</b> para cazar la gravel ideal:\n"
-            f" • 📏 <b>Estatura:</b> <code>{h} cm</code> (Talla base calculada: <b>{prof['talla_calculada']}</b>)\n"
-            f" • 💰 <b>Presupuesto Objetivo:</b> <code>{bud} €</code> (Hasta <b>{tope} €</b> con holgura para chollazos)\n"
-            f" • 📍 <b>Ubicación:</b> Madrid (Prioridad tiendas físicas y envíos)\n"
-            f" • 🧭 <b>Uso:</b> 50% Asfalto / 50% Pista y Tierra\n\n"
-            "1. <b>Tallaje Biomecánico Dinámico:</b> Cada fabricante talla diferente. Calculo tu talla exacta según la geometría real (ej. Canyon XS, Focus 48, Conor SM, Megamo S, Trek 52).\n"
-            "2. <b>Rastreo Multi-Tienda en Madrid y Online:</b> Monitorizo 14 tiendas físicas y outlets (Sanferbike M-30, Calmera Atocha, Fabregues, Mammoth, Chollometro...).\n"
-            "3. <b>Historial de Precios:</b> Registro caídas y subidas de precio para detectar auténticas gangas.\n\n"
-            "📌 <b>COMANDOS PRINCIPALES:</b>\n"
-            " • 🏆 <b>/ranking</b>: Tu Podio y Tier List personalizado a tus 169 cm y presupuesto.\n"
-            " • 🚲 <b>/catalogo</b>: Ver todas las bicicletas disponibles en stock actualmente.\n"
-            " • 📄 <code>/ficha [modelo]</code>: Ficha técnica con componentes, dónde comprarla y distancia (ej: <code>/ficha Kalima</code> o <code>/ficha Jakar</code>).\n"
-            " • 💥 <code>/chollazos [máx €]</code>: Gangas ordenadas por % de descuento (ej: <code>/chollazos 1200</code> o <code>/chollazos 30%</code>).\n"
-            " • 📍 <b>/tiendas</b>: Tiendas físicas recomendadas en Madrid.\n"
-            " • 📈 <code>/historial [modelo]</code>: Evolución histórica de precios de un modelo.\n"
-            " • 📊 <b>/stats</b>: Estadísticas globales del catálogo y tiendas.\n"
-            " • 📥 <code>/add [URL]</code>: Pega cualquier enlace de una bici para analizarla al instante.\n\n"
-            "⚙️ <b>PERSONALIZACIÓN DE TU PERFIL:</b>\n"
-            " • <code>/altura 172</code>: Ajustar tu estatura exacta en cm.\n"
-            " • <code>/presupuesto 1200</code>: Ajustar tu presupuesto base.\n"
-            " • <code>/holgura 20</code>: Margen extra % admisible en grandes ofertas.\n\n"
-            "🚀 <b>¿Por dónde empezar?</b> Escribe <b>/ranking</b> para ver tus mejores opciones o <b>/ficha Kalima</b>."
+            "🚲 <b>¡HOLA! SOY TU ASISTENTE GRAVEL</b>\n\n"
+            "Te ayudo a elegir la mejor bici de gravel para <b>50% asfalto y 50% tierra</b> con frenos hidráulicos.\n\n"
+            f"🎯 <b>Tu perfil actual:</b>\n"
+            f" • 📏 <b>Estatura:</b> <code>{h} cm</code> (Talla: <b>{prof['talla_calculada']}</b>)\n"
+            f" • 💰 <b>Presupuesto:</b> <code>{bud} €</code> (hasta <b>{tope} €</b> en chollos)\n"
+            f" • 📍 <b>Zona:</b> {prof.get('zona', 'Madrid')}\n\n"
+            "👇 <b>Toca un botón abajo o escribe directamente</b> lo que buscas (ej: <i>'mido 172'</i>, <i>'1100 €'</i>, <i>'kalima vs jakar'</i>):"
         )
-        send_reply(chat_id, welcome)
+        send_reply(chat_id, welcome, reply_markup=MAIN_KEYBOARD)
 
     elif text in ["/help", "help", "ayuda", "menu"]:
         help_msg = (
-            "🚲 <b>GRAVEL BOT - GUÍA RÁPIDA DE COMANDOS</b> 🚲\n\n"
-            "🏆 <b>/ranking</b>: Ver tu Tier List personalizado.\n"
-            "🚲 <b>/catalogo</b>: Ver todas las bicis disponibles en stock.\n"
-            "📄 <code>/ficha [modelo]</code>: Ficha técnica, componentes y dónde comprarla.\n"
-            "💥 <code>/chollazos [máx €]</code>: Gangas ordenadas por % de descuento.\n"
-            "📍 <b>/tiendas</b>: Tiendas físicas recomendadas en Madrid.\n"
-            "📈 <code>/historial [modelo]</code>: Evolución histórica de precios.\n"
-            "📊 <b>/stats</b>: Estadísticas del catálogo.\n"
-            "📥 <code>/add [URL]</code>: Ingestar una nueva bici desde un enlace web.\n"
-            "👤 <b>/perfil</b>: Ver o editar tu estatura y presupuesto."
+            "🚲 <b>¿CÓMO USAR EL ASISTENTE?</b>\n\n"
+            "Puedes tocar los <b>botones de abajo</b> o escribir en lenguaje normal:\n\n"
+            "• 🏆 <b>Toca 'Ver Mi Podio'</b>: Compras maestras para tu fisionomía.\n"
+            "• 📏 <b>Escribe tu altura</b>: Ej: <i>'mido 170'</i> o <i>'169 cm'</i>.\n"
+            "• 💰 <b>Escribe tu presupuesto</b>: Ej: <i>'presupuesto 1000'</i> o <i>'1200 €'</i>.\n"
+            "• ⚔️ <b>Compara dos bicis</b>: Ej: <i>'kalima vs jakar'</i>.\n"
+            "• 📄 <b>Consulta una bici</b>: Ej: <i>'kalima'</i>, <i>'jakar'</i> o <i>'terra'</i>.\n"
+            "• ⚙️ <b>Cambia tu zona</b>: Ej: <code>/ubicacion Valencia</code>."
         )
-        send_reply(chat_id, help_msg)
-    elif text in ["/perfil", "/profile", "perfil", "mi perfil"]:
-        send_reply(chat_id, format_profile_message(chat_id, username))
+        send_reply(chat_id, help_msg, reply_markup=MAIN_KEYBOARD)
 
+    elif any(text.startswith(cmd) for cmd in ["🏆", "ver mi podio", "/ranking", "ranking", "podio", "que me compro", "recomiendame"]):
+        send_reply(chat_id, format_tier_list_message(chat_id), reply_markup=MAIN_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["🔥", "chollos <1.000€", "chollos", "gangas", "/chollazos", "chollazos"]):
+        parts = raw_text.split()
+        max_p = None
+        for p in parts[1:]:
+            p_clean = p.replace("€", "").replace(".", "").strip()
+            if p_clean.isdigit():
+                max_p = float(p_clean)
+        from gravel_bot.deal_detector import format_deals_message
+        send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0), reply_markup=MAIN_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["⚙️ biplato", "biplato", "/biplato", "/2x", "doble plato"]):
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(transmission="2x"), reply_markup=MAIN_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["⚙️ monoplato", "monoplato", "/monoplato", "/1x"]):
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(transmission="1x"), reply_markup=MAIN_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["♻️", "ocasion", "ocasión", "/ocasion", "segunda mano"]):
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(store_type="ocasion"), reply_markup=MAIN_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["👤", "/perfil", "perfil", "mi perfil", "mi talla"]):
+        send_reply(chat_id, format_profile_message(chat_id, username), reply_markup=MAIN_KEYBOARD)
+
+    # Detección inteligente de estatura en lenguaje natural (ej: "mido 170", "mido 1.69", "172 cm")
+    elif (re.search(r'\b(?:mido|altura|estatura)\s*(\d{2,3}(?:[.,]\d{1,2})?)\s*(?:cm|m)?\b', text) or
+          re.search(r'\b(\d{3})\s*cm\b', text)):
+        m = (re.search(r'\b(?:mido|altura|estatura)\s*(\d{2,3}(?:[.,]\d{1,2})?)\s*(?:cm|m)?\b', text) or
+             re.search(r'\b(\d{3})\s*cm\b', text))
+        raw_val = float(m.group(1).replace(",", "."))
+        val = int(raw_val * 100) if raw_val < 3.0 else int(raw_val)
+        if 140 <= val <= 215:
+            update_user_profile(chat_id, estatura_cm=val)
+            prof = get_profile_for_chat(chat_id, username)
+            send_reply(chat_id, f"✅ <b>Estatura guardada: {val} cm</b>.\nTu talla base calculada es: <b>{prof['talla_calculada']}</b>.\n\nToca <b>🏆 Ver Mi Podio</b> para ver tus opciones ideales.", reply_markup=MAIN_KEYBOARD)
+        else:
+            send_reply(chat_id, "⚠️ Introduce una estatura realista en cm (ej: <code>169 cm</code> o <code>mido 172</code>).")
+
+    # Detección inteligente de presupuesto (ej: "presupuesto 1000", "tengo 1200 €", "1100€")
+    elif (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})\s*€?\b', text) or
+          re.search(r'\b(\d{3,4})\s*€\b', text)):
+        m = (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})\s*€?\b', text) or
+             re.search(r'\b(\d{3,4})\s*€\b', text))
+        bud = float(m.group(1))
+        if 400 <= bud <= 5000:
+            update_user_profile(chat_id, presupuesto_max=bud)
+            send_reply(chat_id, f"✅ <b>Presupuesto fijado en {int(bud)} €</b>.\nTus opciones en <b>🏆 Ver Mi Podio</b> se han actualizado a este límite.", reply_markup=MAIN_KEYBOARD)
+        else:
+            send_reply(chat_id, "⚠️ Introduce un presupuesto entre 400 € y 5.000 € (ej: <code>1000 €</code>).")
+
+    # Detección inteligente de modelo suelto (ej: "kalima", "jakar", "terra")
+    elif text.strip() in ["kalima", "jakar", "terra", "territ", "nuroad", "grizl", "checkpoint", "esker", "x-grip", "x-strada", "asket", "atlas"]:
+        from gravel_bot.bike_inspector import format_bike_inspection_message
+        send_reply(chat_id, format_bike_inspection_message(text.strip()), reply_markup=MAIN_KEYBOARD)
     elif text.startswith("/altura") or text.startswith("/setaltura"):
         parts = raw_text.split()
         if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
