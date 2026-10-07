@@ -48,6 +48,8 @@ class KnowledgeBase:
             return transmisiones.get("shimano_grx_rx600_2x11")
         if "rx400" in t_clean or "grx 400" in t_clean or ("grx" in t_clean and "10" in t_clean):
             return transmisiones.get("shimano_grx_rx400_2x10")
+        if "gr-cinco" in t_clean or "gr cinco" in t_clean or ("cues" in t_clean and ("11v" in t_clean or "11" in t_clean)):
+            return transmisiones.get("shimano_cues_u6000_1x11")
         if "cues" in t_clean:
             return transmisiones.get("shimano_cues_u6000_1x10")
         if "apex" in t_clean and ("axs" in t_clean or "electronico" in t_clean or "12" in t_clean):
@@ -80,7 +82,7 @@ class KnowledgeBase:
         t_clean = text.lower()
         frenos = self._data.get("frenos", {})
 
-        if any(w in t_clean for w in ["grx", "rx400", "rx600", "rx810", "rx820"]) and not any(m in t_clean for m in ["mecanico", "cable"]):
+        if any(w in t_clean for w in ["grx", "rx400", "rx600", "rx810", "rx820", "u6030", "gr-cinco", "gr cinco"]) and not any(m in t_clean for m in ["mecanico", "cable"]):
             return frenos.get("shimano_grx_hidraulico", {"tipo": "hidraulico", "puntos": 25.0})
         if any(w in t_clean for w in ["apex axs", "rival axs", "force axs"]):
             return frenos.get("sram_hidraulico_dot", {"tipo": "hidraulico", "puntos": 24.0})

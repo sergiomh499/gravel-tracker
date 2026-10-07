@@ -48,6 +48,18 @@
       "climbing_ratio": 0.83,
       "accionamiento": "mecanico"
     },
+    "shimano_cues_u6000_1x11": {
+      "marca": "Shimano",
+      "modelo": "CUES U6000 1x11",
+      "tipo": "1x11",
+      "platos": [42],
+      "cassette": [11, 50],
+      "puntos_asfalto": 8.8,
+      "puntos_tierra": 9.5,
+      "puntos_global": 23.0,
+      "climbing_ratio": 0.84,
+      "accionamiento": "mecanico"
+    },
     "shimano_cues_u6000_1x10": {
       "marca": "Shimano",
       "modelo": "CUES U6000",

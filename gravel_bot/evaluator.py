@@ -16,7 +16,7 @@ KNOWN_BRANDS = [
     "KTM", "R-Raymon", "Raymon", "Cube", "BH", "Stevens", "Wilier",
     "Mondraker", "Polygon", "Marin", "Specialized", "Giant", "Kona", "Vitus",
     "Bianchi", "Radon", "Rose", "Mendiz", "Ridley", "Colnago", "Lapierre",
-    "Berria", "Fuji", "Salsa", "Cervélo", "Sunn", "Bombtrack", "NS Bikes", "Wolfbike"
+    "Berria", "Fuji", "Salsa", "Cervélo", "Sunn", "Bombtrack", "NS Bikes", "Wolfbike", "Corredor"
 ]
 
 def detect_bike_specs(title: str, description: str = "", price: float = 0.0, sizes: List[str] = None) -> Dict[str, Any]:
