@@ -98,12 +98,14 @@ class TestNewFeatures(unittest.TestCase):
         self.assertIn("inline_keyboard", ikb)
         self.assertTrue(any("url" in btn for row in ikb["inline_keyboard"] for btn in row))
 
-        # Simular toques de botón mediante _process_message
+        # Simular toques de botón mediante _process_message aislando llamadas HTTP externas
+        from unittest.mock import patch
         test_chat_id = 998877
-        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "⚔️ Comparar Bicis"})
-        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "📍 Tiendas Físicas"})
-        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "👤 Mi Perfil"})
-        _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "kalima"})
+        with patch("urllib.request.urlopen"):
+            _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "⚔️ Comparar Bicis"})
+            _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "📍 Tiendas Físicas"})
+            _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "👤 Mi Perfil"})
+            _process_message({"chat": {"id": test_chat_id, "username": "btn_tester"}, "text": "kalima"})
 
 if __name__ == "__main__":
     unittest.main()
