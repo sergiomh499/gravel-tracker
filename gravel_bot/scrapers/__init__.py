@@ -10,28 +10,20 @@ from gravel_bot.scrapers.sanferbike import SanferbikeScraper
 from gravel_bot.scrapers.wallapop import WallapopMadridScraper
 from gravel_bot.scrapers.outlets import OutletAggregatorScraper
 from gravel_bot.scrapers.chollometro import ChollometroScraper
-from gravel_bot.scrapers.bikediscount import BikeDiscountScraper
-from gravel_bot.scrapers.decathlon import DecathlonScraper
-from gravel_bot.scrapers.bicimarket import BicimarketScraper
-from gravel_bot.scrapers.canyon import CanyonOutletScraper
-from gravel_bot.scrapers.bicispasaje import BicispasajeScraper
+from gravel_bot.scrapers.multi_store import MultiStoreAggregatorScraper
 from gravel_bot.scrapers.cicloscorredor import CiclosCorredorScraper
 from gravel_bot.scrapers.bikestocks import BikestocksScraper
 from gravel_bot.scrapers.buhobike import BuhobikeScraper
-from gravel_bot.scrapers.multi_store import MultiStoreAggregatorScraper
+from gravel_bot.scrapers.alltricks import AlltricksScraper
 
 ACTIVE_SCRAPERS: List[BaseScraper] = [
-    DecathlonScraper(),
-    BikeDiscountScraper(),
-    BicimarketScraper(),
-    CanyonOutletScraper(),
-    BicispasajeScraper(),
+    MammothScraper(),
+    SanferbikeScraper(),
+    BuhobikeScraper(),
     CiclosCorredorScraper(),
     BikestocksScraper(),
-    BuhobikeScraper(),
-    SanferbikeScraper(),
+    AlltricksScraper(),
     FabreguesScraper(),
-    MammothScraper(),
     WallapopMadridScraper(),
     OutletAggregatorScraper(),
     ChollometroScraper(),

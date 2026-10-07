@@ -32,6 +32,7 @@ class MultiStoreAggregatorScraper(BaseScraper):
         "ciclos_corredor",
         "bikestocks_online",
         "buhobike_delicias",
+        "alltricks",
         "sanferbike_m30",
         "fabregues_online",
         "mammoth_madrid",
