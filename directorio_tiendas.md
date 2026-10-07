@@ -8,9 +8,9 @@ Este directorio clasifica y documenta **50 tiendas físicas, plataformas online,
 ## Índice Rápido del Directorio (50 Fuentes)
 
 * [1. Tiendas Físicas en Madrid (15 Tiendas)](#1-tiendas-físicas-en-madrid)
+* [2. Grandes Tiendas Nacionales y Outlets Online en España (15 Tiendas)](#2-grandes-tiendas-nacionales-y-outlets-online-en-españa)
 * [3. Gigantes Europeos de Ciclismo con Envío a España (12 Tiendas)](#3-gigantes-europeos-de-ciclismo-con-envío-a-españa)
 * [4. Mercados de Segunda Mano Certificada, Reacondicionadas y Chollos (8 Plataformas)](#4-mercados-de-segunda-mano-certificada-reacondicionadas-y-chollos)
-
 ---
 
 ## 1. Tiendas Físicas en Madrid
