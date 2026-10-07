@@ -194,5 +194,89 @@ class TestNewFeatures(unittest.TestCase):
         self.assertIsNotNone(prof)
         self.assertEqual(prof["zona"], "Valencia")
 
+    def test_tuvalum_scraper_integration(self):
+        """Verifica la extracción y fallback de bicicletas reacondicionadas en Tuvalum."""
+        from gravel_bot.scrapers.tuvalum import TuvalumScraper
+        from gravel_bot.scrapers import get_all_scrapers
+
+        scraper = TuvalumScraper()
+        items = scraper.scrape()
+        self.assertGreater(len(items), 0)
+        first = items[0]
+        self.assertIn("title", first)
+        self.assertIn("price", first)
+        self.assertGreater(first["price"], 400)
+        self.assertIn("url", first)
+        self.assertEqual(first["tienda_slug"], "tuvalum")
+
+        # Verificar que está en la lista de scrapers activos
+        all_active = [s.name for s in get_all_scrapers()]
+        self.assertIn("tuvalum", all_active)
+
+    def test_persistent_wizard_draft(self):
+        """Verifica la persistencia de borradores de wizard en SQLite."""
+        from gravel_bot.db import save_wizard_draft, get_wizard_draft, clear_wizard_draft
+
+        test_uid = 771122
+        clear_wizard_draft(test_uid)
+        self.assertIsNone(get_wizard_draft(test_uid))
+
+        save_wizard_draft(test_uid, "step2", {"estatura": 172})
+        d = get_wizard_draft(test_uid)
+        self.assertIsNotNone(d)
+        self.assertEqual(d["estatura"], 172)
+        self.assertEqual(d["_step"], "step2")
+
+        save_wizard_draft(test_uid, "step3", {"estatura": 172, "presupuesto": 1100})
+        d2 = get_wizard_draft(test_uid)
+        self.assertEqual(d2["presupuesto"], 1100)
+        self.assertEqual(d2["_step"], "step3")
+
+        clear_wizard_draft(test_uid)
+        self.assertIsNone(get_wizard_draft(test_uid))
+
+    def test_entrepierna_biomechanics_and_command(self):
+        """Verifica el cálculo de talla por entrepierna y su comando en Telegram."""
+        from unittest.mock import patch
+        from gravel_bot.biomechanics import calculate_frame_size_from_inseam
+        from gravel_bot.bot_service import _process_message
+        from gravel_bot.db import get_user_profile
+
+        res = calculate_frame_size_from_inseam(79.0)
+        self.assertIn("cuadro_cm", res)
+        self.assertEqual(res["cuadro_cm"], 51.4)
+        self.assertEqual(res["talla_recomendada"], "S")
+        self.assertEqual(res["altura_sillin_cm"], 69.9)
+
+        chat_id = 665544
+        with patch("urllib.request.urlopen"):
+            _process_message({"chat": {"id": chat_id, "username": "inseam_usr"}, "text": "/entrepierna 79"})
+
+        prof = get_user_profile(chat_id)
+        self.assertIsNotNone(prof)
+        self.assertEqual(prof["entrepierna_cm"], 79.0)
+        self.assertEqual(prof["talla_calculada"], "S")
+
+    def test_frecuencia_notificaciones_command(self):
+        """Verifica la actualización de frecuencia de alertas (/frecuencia)."""
+        from unittest.mock import patch
+        from gravel_bot.bot_service import _process_message
+        from gravel_bot.db import get_user_profile
+
+        chat_id = 554433
+        with patch("urllib.request.urlopen"):
+            _process_message({"chat": {"id": chat_id, "username": "frec_usr"}, "text": "/frecuencia diaria"})
+
+        prof = get_user_profile(chat_id)
+        self.assertIsNotNone(prof)
+        self.assertEqual(prof["frecuencia_notificaciones"], "diaria")
+        self.assertEqual(prof["alertas_activas"], 1)
+
+        with patch("urllib.request.urlopen"):
+            _process_message({"chat": {"id": chat_id, "username": "frec_usr"}, "text": "/frecuencia desactivada"})
+
+        prof2 = get_user_profile(chat_id)
+        self.assertEqual(prof2["frecuencia_notificaciones"], "desactivada")
+        self.assertEqual(prof2["alertas_activas"], 0)
 if __name__ == "__main__":
     unittest.main()

@@ -47,17 +47,18 @@ def format_alert_message(bike: Dict[str, Any]) -> str:
     )
     return msg
 
-def send_telegram_alert(bike: Dict[str, Any]) -> bool:
+def send_telegram_alert(bike_or_text: Any) -> bool:
     """
-    Envía una alerta de bicicleta a Telegram.
-    Si no están configuradas las credenciales, muestra un mensaje amigable en consola.
+    Envía una alerta o mensaje formateado a Telegram.
+    Acepta un diccionario de bicicleta o una cadena de texto HTML.
     """
     token = TELEGRAM_BOT_TOKEN
     chat_id = TELEGRAM_CHAT_ID
 
-    msg = format_alert_message(bike)
-
-    if not token or not chat_id:
+    if isinstance(bike_or_text, str):
+        msg = bike_or_text
+    else:
+        msg = format_alert_message(bike_or_text)
         print("\n" + "="*60)
         print("📢 [AVISO TELEGRAM PENDIENTE DE CONFIGURAR]")
         print("Para recibir alertas instantáneas en tu móvil, define:")
@@ -87,9 +88,9 @@ def send_telegram_alert(bike: Dict[str, Any]) -> bool:
         with urllib.request.urlopen(req, timeout=10) as response:
             res_body = json.loads(response.read().decode("utf-8"))
             if res_body.get("ok"):
-                print(f"✅ Alerta Telegram enviada con éxito para {bike.get('marca')} {bike.get('modelo')}")
+                label = f"{bike_or_text.get('marca', '')} {bike_or_text.get('modelo', '')}" if isinstance(bike_or_text, dict) else "Mensaje informativo"
+                print(f"✅ Alerta Telegram enviada con éxito ({label})")
                 return True
-            else:
                 print(f"❌ Error en respuesta Telegram: {res_body}")
                 return False
     except urllib.error.HTTPError as e:

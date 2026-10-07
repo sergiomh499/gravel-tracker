@@ -37,6 +37,7 @@ jobs:
           git config user.email "bot-cloud@gravel.local"
           git add gravel_madrid.db
           if ! git diff --staged --quiet; then
+            git pull --rebase origin main || true
             git commit -m "Auto-sync: base de datos actualizada por el bot en GitHub [skip ci]"
             git push
           else

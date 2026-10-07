@@ -137,12 +137,16 @@ def init_db():
         nota_minima_alerta REAL DEFAULT 8.5
     );
     """)
-    # Migración en caliente de columna holgura si la base ya existe
-    try:
-        c.execute("ALTER TABLE perfiles_ciclista ADD COLUMN holgura_max_pct REAL DEFAULT 15.0")
-    except Exception:
-        pass
-
+    # Migración en caliente de columnas en perfiles_ciclista
+    for col, col_def in [
+        ("holgura_max_pct", "REAL DEFAULT 15.0"),
+        ("entrepierna_cm", "REAL"),
+        ("frecuencia_notificaciones", "TEXT DEFAULT 'instantanea'")
+    ]:
+        try:
+            c.execute(f"ALTER TABLE perfiles_ciclista ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
     # Tabla alertas_por_usuario (para evitar enviar duplicados al mismo usuario)
     c.execute("""
     CREATE TABLE IF NOT EXISTS alertas_por_usuario (
@@ -162,6 +166,17 @@ def init_db():
         talla_deseada TEXT NOT NULL,
         activa INTEGER DEFAULT 1,
         fecha_creacion TEXT NOT NULL
+    );
+    """)
+
+    # Tabla sesiones_wizard (persistencia del asistente paso a paso en SQLite)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS sesiones_wizard (
+        usuario_id INTEGER PRIMARY KEY,
+        paso_actual TEXT NOT NULL,
+        datos_json TEXT NOT NULL,
+        fecha_actualizacion TEXT NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
     """)
 
@@ -475,16 +490,16 @@ def update_user_profile(chat_id_or_user_id: int, **kwargs) -> Optional[sqlite3.R
         from gravel_bot.evaluator import calcular_talla_desde_estatura
         kwargs["talla_calculada"] = calcular_talla_desde_estatura(kwargs["estatura_cm"])
     allowed_fields = [
-        "estatura_cm", "talla_calculada", "presupuesto_max", "holgura_max_pct",
+        "estatura_cm", "entrepierna_cm", "talla_calculada", "presupuesto_max", "holgura_max_pct",
         "preferencia_transmision", "terreno_asfalto_pct", "zona",
-        "alertas_activas", "nota_minima_alerta"
+        "alertas_activas", "nota_minima_alerta", "frecuencia_notificaciones"
     ]
     updates = []
     params = []
     for k, v in kwargs.items():
+        if k in allowed_fields:
             updates.append(f"{k} = ?")
             params.append(v)
-
     if not updates:
         return get_user_profile(chat_id_or_user_id)
     params.append(user_id)
@@ -598,3 +613,43 @@ def purge_obsolete_and_junior_models() -> Dict[str, int]:
         c.execute(f"DELETE FROM bicicletas WHERE id IN ({placeholders})", bad_ids)
         purged_bikes = c.rowcount
         return {"purged_bikes": purged_bikes, "purged_prices": purged_prices}
+def save_wizard_draft(chat_id_or_user_id: int, step: str, data: Dict[str, Any]) -> None:
+    """Persiste en SQLite el borrador de configuración del asistente wizard."""
+    import json
+    user_id = get_or_create_user(chat_id_or_user_id)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with db_session() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO sesiones_wizard (usuario_id, paso_actual, datos_json, fecha_actualizacion)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(usuario_id) DO UPDATE SET
+                paso_actual = excluded.paso_actual,
+                datos_json = excluded.datos_json,
+                fecha_actualizacion = excluded.fecha_actualizacion
+        """, (user_id, step, json.dumps(data, ensure_ascii=False), now_str))
+
+def get_wizard_draft(chat_id_or_user_id: int) -> Optional[Dict[str, Any]]:
+    """Recupera el borrador de configuración del usuario si existe."""
+    import json
+    user_id = get_or_create_user(chat_id_or_user_id)
+    with db_session() as conn:
+        c = conn.cursor()
+        c.execute("SELECT paso_actual, datos_json, fecha_actualizacion FROM sesiones_wizard WHERE usuario_id = ?", (user_id,))
+        row = c.fetchone()
+        if row:
+            try:
+                payload = json.loads(row["datos_json"])
+                payload["_step"] = row["paso_actual"]
+                payload["_updated_at"] = row["fecha_actualizacion"]
+                return payload
+            except Exception:
+                return None
+    return None
+
+def clear_wizard_draft(chat_id_or_user_id: int) -> None:
+    """Limpia el borrador del wizard al completar la configuración."""
+    user_id = get_or_create_user(chat_id_or_user_id)
+    with db_session() as conn:
+        c = conn.cursor()
+        c.execute("DELETE FROM sesiones_wizard WHERE usuario_id = ?", (user_id,))

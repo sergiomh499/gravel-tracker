@@ -5,6 +5,7 @@ cálculo dinámico de talla por fabricante y validación automática de enlaces 
 """
 from __future__ import annotations
 import os
+import time
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
@@ -19,7 +20,8 @@ from gravel_bot.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from gravel_bot.db import (
     init_db, get_all_bikes, get_deals,
     get_or_create_user, get_user_profile, update_user_profile,
-    add_size_alert, get_user_size_alerts, delete_size_alert
+    add_size_alert, get_user_size_alerts, delete_size_alert,
+    save_wizard_draft, get_wizard_draft, clear_wizard_draft
 )
 from gravel_bot.pipeline import run_pipeline
 from gravel_bot.geometry_sizing import get_recommended_size_dynamic
@@ -48,6 +50,8 @@ def register_bot_commands():
         {"command": "ubicacion", "description": "📍 Cambiar tu ciudad/zona (ej: /ubicacion Valencia)"},
         {"command": "holgura", "description": "🎯 Margen para chollos (ej: /holgura 15)"},
         {"command": "transmision", "description": "⚙️ Preferencia 1x / 2x / indiferente"},
+        {"command": "entrepierna", "description": "📏 Talla exacta por entrepierna (ej: /entrepierna 79)"},
+        {"command": "frecuencia", "description": "🔔 Frecuencia de alertas: instantanea / diaria / off"},
         {"command": "desarrollo", "description": "⚙️ Simulador de cadencia y velocidades (ej: /desarrollo 2x)"},
         {"command": "vs", "description": "⚔️ Comparativa 1v1 entre dos bicis (ej: /vs kalima jakar)"},
         {"command": "avisatalla", "description": "🔔 Alerta de reposición de talla (ej: /avisatalla kalima SM)"},
@@ -277,6 +281,11 @@ def format_profile_message(chat_id: int, username: str = "") -> str:
     msg += f" • <b>Presupuesto Base:</b> {bud} €\n"
     msg += f" • <b>Holgura para Chollazos:</b> +{int(holgura)}% (Hasta <b>{tope_holgura} €</b> si la oferta lo justifica)\n"
     msg += f" • <b>Transmisión preferida:</b> {trans}\n"
+    entrepierna = prof.get("entrepierna_cm")
+    if entrepierna:
+        msg += f" • <b>Entrepierna:</b> {entrepierna} cm\n"
+    frec = prof.get("frecuencia_notificaciones", "instantanea")
+    msg += f" • <b>Frecuencia avisos:</b> {frec}\n"
     msg += f" • <b>Ubicación / Zona:</b> {prof.get('zona', 'Madrid')}\n"
     msg += f" • <b>Uso declarado:</b> 50% Asfalto / 50% Tierra\n\n"
     msg += "📐 <b>Tallas Exactas Recomendadas por Fabricante:</b>\n"
@@ -294,6 +303,8 @@ def format_profile_message(chat_id: int, username: str = "") -> str:
     msg += " • <code>/presupuesto 1000</code> (Cambiar tope de precio base)\n"
     msg += " • <code>/holgura 15</code> (Margen extra % si el chollo lo merece)\n"
     msg += " • <code>/transmision 1x</code> (o <code>/transmision 2x</code>)\n"
+    msg += " • <code>/entrepierna 79</code> (Ajuste biomecánico por entrepierna)\n"
+    msg += " • <code>/frecuencia instantanea</code> (o <code>/frecuencia diaria</code>)\n"
     msg += " • <code>/ubicacion Madrid</code> (Cambiar tu ciudad o zona)\n"
     msg += " • <code>/validar</code> (Auditar enlaces y recalcular tallas en vivo)"
     return msg
@@ -424,6 +435,7 @@ def _process_message(msg: Dict[str, Any]):
         step = parts[1] if len(parts) > 1 else ""
         if step == "step2" and len(parts) >= 3:
             estatura = int(parts[2])
+            save_wizard_draft(chat_id, "step2", {"estatura": estatura})
             send_reply(
                 chat_id,
                 f"🧙‍♂️ <b>ASISTENTE PASO A PASO (2/4)</b>\n\n"
@@ -435,6 +447,7 @@ def _process_message(msg: Dict[str, Any]):
         elif step == "step3" and len(parts) >= 4:
             estatura = int(parts[2])
             presupuesto = int(parts[3])
+            save_wizard_draft(chat_id, "step3", {"estatura": estatura, "presupuesto": presupuesto})
             send_reply(
                 chat_id,
                 f"🧙‍♂️ <b>ASISTENTE PASO A PASO (3/4)</b>\n\n"
@@ -449,6 +462,7 @@ def _process_message(msg: Dict[str, Any]):
             estatura = int(parts[2])
             presupuesto = int(parts[3])
             trans = parts[4]
+            save_wizard_draft(chat_id, "step4", {"estatura": estatura, "presupuesto": presupuesto, "transmision": trans})
             send_reply(
                 chat_id,
                 f"🧙‍♂️ <b>ASISTENTE PASO A PASO (4/4)</b>\n\n"
@@ -462,6 +476,7 @@ def _process_message(msg: Dict[str, Any]):
             presupuesto = float(parts[3])
             trans = parts[4]
             zona = parts[5]
+            clear_wizard_draft(chat_id)
             get_or_create_user(chat_id, username)
             update_user_profile(
                 chat_id,
@@ -659,6 +674,46 @@ def _process_message(msg: Dict[str, Any]):
             send_reply(chat_id, f"✅ <b>Ubicación actualizada:</b> <code>{nueva_zona}</code>.\n\nTus búsquedas y recomendaciones se adaptarán a tu zona.")
         else:
             send_reply(chat_id, "ℹ️ Formato: <code>/ubicacion Madrid</code> (o <code>/ubicacion Barcelona</code>, <code>/ubicacion Valencia</code>, etc.)")
+    elif any(text.startswith(cmd) for cmd in ["/entrepierna", "/inseam", "entrepierna"]):
+        parts = raw_text.split()
+        if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
+            val = float(parts[1])
+            if 60 <= val <= 105:
+                from gravel_bot.biomechanics import calculate_frame_size_from_inseam
+                bio = calculate_frame_size_from_inseam(val)
+                get_or_create_user(chat_id, username)
+                update_user_profile(chat_id, entrepierna_cm=val, talla_calculada=bio["talla_recomendada"])
+                send_reply(
+                    chat_id,
+                    f"📏 <b>AJUSTE BIOMECÁNICO POR ENTREPIERNA</b>\n\n"
+                    f" • <b>Entrepierna:</b> <code>{val} cm</code>\n"
+                    f" • <b>Talla de Cuadro:</b> <code>{bio['cuadro_cm']} cm</code> (Talla nominal: <b>{bio['talla_recomendada']}</b> / {bio['talla_numerica']})\n"
+                    f" • <b>Altura Sillín Recomendada:</b> <code>{bio['altura_sillin_cm']} cm</code> (desde centro pedalier)\n"
+                    f" • <i>Método: {bio['formula']}</i>\n\n"
+                    f"Tu perfil se ha actualizado con tu talla exacta."
+                )
+            else:
+                send_reply(chat_id, "⚠️ La medida de entrepierna debe estar entre 60 y 105 cm (ej: <code>/entrepierna 79</code>).")
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/entrepierna 79</code> (en centímetros)")
+    elif any(text.startswith(cmd) for cmd in ["/frecuencia", "/notificaciones", "frecuencia"]):
+        parts = raw_text.split()
+        if len(parts) >= 2 and parts[1].lower() in ["instantanea", "instantaneas", "diaria", "diario", "off", "desactivada", "desactivadas"]:
+            modo_raw = parts[1].lower()
+            if modo_raw in ["instantanea", "instantaneas"]:
+                modo = "instantanea"
+                desc = "⚡ <b>Alertas Instantáneas:</b> Recibirás avisos al momento por cada ganga detectada."
+            elif modo_raw in ["diaria", "diario"]:
+                modo = "diaria"
+                desc = "🌅 <b>Resumen Diario:</b> Recibirás un resumen matinal consolidado a las 08:00 AM."
+            else:
+                modo = "desactivada"
+                desc = "🔕 <b>Alertas Desactivadas:</b> No recibirás notificaciones automáticas."
+            get_or_create_user(chat_id, username)
+            update_user_profile(chat_id, frecuencia_notificaciones=modo, alertas_activas=0 if modo == "desactivada" else 1)
+            send_reply(chat_id, f"✅ <b>Frecuencia de Notificaciones Actualizada</b>\n\n{desc}")
+        else:
+            send_reply(chat_id, "ℹ️ Formato: <code>/frecuencia instantanea</code>, <code>/frecuencia diaria</code> o <code>/frecuencia desactivada</code>")
     elif any(text.startswith(cmd) for cmd in ["/desarrollo", "/cadencia", "/velocidad"]):
         parts = raw_text.split(maxsplit=1)
         sub = parts[1].strip() if len(parts) > 1 else "2x"
@@ -929,7 +984,12 @@ def handle_incoming_message(msg: Dict[str, Any]):
         if chat_id:
             send_reply(chat_id, f"⚠️ Error al procesar tu solicitud: {e}")
 
-class CloudHealthHandler(http.server.SimpleHTTPRequestHandler):
+class CloudHealthHandler(http.server.BaseHTTPRequestHandler):
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
@@ -938,7 +998,6 @@ class CloudHealthHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         pass
-
 def _start_cloud_health_server(port: int):
     try:
         import socketserver

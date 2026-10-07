@@ -21,7 +21,7 @@ from gravel_bot.scrapers.bicispasaje import BicispasajeScraper
 from gravel_bot.scrapers.bicimarket import BicimarketScraper
 from gravel_bot.scrapers.bikediscount import BikeDiscountScraper
 from gravel_bot.scrapers.decathlon import DecathlonScraper
-
+from gravel_bot.scrapers.tuvalum import TuvalumScraper
 ACTIVE_SCRAPERS: List[BaseScraper] = [
     MammothScraper(),
     SanferbikeScraper(),
@@ -40,6 +40,8 @@ ACTIVE_SCRAPERS: List[BaseScraper] = [
     BicimarketScraper(),
     BikeDiscountScraper(),
     DecathlonScraper(),
+    TuvalumScraper(),
 ]
+
 def get_all_scrapers() -> List[BaseScraper]:
     return ACTIVE_SCRAPERS

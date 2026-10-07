@@ -55,8 +55,8 @@ jobs:
           git add gravel_madrid.db directorio_bicicletas.md
           # Solo hace commit si hay cambios reales en los precios, stock o registros
           if ! git diff --staged --quiet; then
+            git pull --rebase origin main || true
             git commit -m "Auto-update: sincronización robótica de stock, precios y Tier List [skip ci]"
             git push
-          else
             echo "No hay variaciones en la base de datos ni en el Tier List."
           fi

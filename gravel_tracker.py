@@ -183,12 +183,12 @@ if __name__ == "__main__":
         elif cmd in ["--add", "add"]:
             agregar_modelo_cli()
         elif cmd in ["--bot", "bot"]:
+            from gravel_bot.bot_service import run_bot_polling
             dur = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
             run_bot_polling(duration_seconds=dur)
         elif cmd in ["--daemon", "daemon"]:
             from gravel_bot.cli import cmd_daemon
             cmd_daemon(None)
-        elif cmd == "--init":
             print(f"Base de datos {DB_PATH} inicializada con éxito.")
         else:
             listar_ranking()

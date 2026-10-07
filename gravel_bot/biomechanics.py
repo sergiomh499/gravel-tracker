@@ -105,3 +105,40 @@ def calculate_speed_at_cadence(plato: int, corona: int, cadencia_rpm: int = 85) 
     desarrollo_metros = (plato / corona) * CIRCUNFERENCIA_700X40_M
     velocidad_kmh = (desarrollo_metros * cadencia_rpm * 60) / 1000.0
     return round(velocidad_kmh, 1)
+
+def calculate_frame_size_from_inseam(entrepierna_cm: float, altura_cm: Optional[float] = None) -> Dict[str, Any]:
+    """
+    Calcula la talla de cuadro exacta y la altura del sillín según la longitud de entrepierna (Inseam).
+    Utiliza el método biomecánico LeMond adaptado a geometrías gravel (Factor 0.65)
+    y la fórmula de ajuste de sillín LeMond-Guimard (Factor 0.885).
+    """
+    if entrepierna_cm <= 0:
+        entrepierna_cm = (altura_cm * 0.465) if altura_cm else 79.0
+
+    cuadro_cm = round(entrepierna_cm * 0.65, 1)
+    altura_sillin_cm = round(entrepierna_cm * 0.885, 1)
+
+    if cuadro_cm < 49.0:
+        talla = "XS"
+        talla_num = "47-49"
+    elif cuadro_cm < 53.0:
+        talla = "S"
+        talla_num = "50-52"
+    elif cuadro_cm < 56.0:
+        talla = "M"
+        talla_num = "53-55"
+    elif cuadro_cm < 59.0:
+        talla = "L"
+        talla_num = "56-58"
+    else:
+        talla = "XL"
+        talla_num = "59-61"
+
+    return {
+        "entrepierna_cm": entrepierna_cm,
+        "cuadro_cm": cuadro_cm,
+        "talla_recomendada": talla,
+        "talla_numerica": talla_num,
+        "altura_sillin_cm": altura_sillin_cm,
+        "formula": "LeMond Gravel (0.65 × Entrepierna)"
+    }

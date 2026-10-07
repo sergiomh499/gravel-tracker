@@ -2,14 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependencias si las hubiera
 COPY . /app
 
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10000
-ENV TELEGRAM_BOT_TOKEN=8987812105:AAGEPtpXKz8kcai8TkcOILFRyIhpNqOTdJQ
-ENV TELEGRAM_CHAT_ID=4983947
 
+# Puerto de servicio web y healthcheck para Render, Railway, Fly.io, Dokku, etc.
 EXPOSE 10000 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD python3 -c "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT', '10000'), timeout=3)" || exit 1
 
 CMD ["python", "gravel_tracker.py", "--bot"]
