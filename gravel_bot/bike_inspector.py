@@ -287,17 +287,19 @@ def get_available_bikes_list(
     conn.close()
     return [dict(r) for r in rows]
 
-def format_available_bikes_message(
+def get_paged_available_bikes_payload(
     tier: Optional[str] = None,
     max_price: Optional[float] = None,
     brand: Optional[str] = None,
     transmission: Optional[str] = None,
     brakes: Optional[str] = None,
     size: Optional[str] = None,
-    store_type: Optional[str] = None
-) -> str:
+    store_type: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 6
+) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
-    Formatea la lista de bicicletas disponibles en stock para consulta rápida.
+    Retorna el texto formateado de la página de bicicletas y el InlineKeyboardMarkup para paginar interactivamente.
     """
     bikes = get_available_bikes_list(
         tier=tier,
@@ -309,7 +311,15 @@ def format_available_bikes_message(
         store_type=store_type
     )
     if not bikes:
-        return "ℹ️ No se encontraron bicicletas disponibles en stock con los filtros indicados."
+        return "ℹ️ No se encontraron bicicletas disponibles en stock con los filtros indicados.", None
+
+    total = len(bikes)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    current_page = max(1, min(page, total_pages))
+
+    start_idx = (current_page - 1) * page_size
+    end_idx = min(start_idx + page_size, total)
+    slice_bikes = bikes[start_idx:end_idx]
 
     filtros = []
     if transmission:
@@ -325,11 +335,11 @@ def format_available_bikes_message(
     if brand:
         filtros.append(f"Marca: {brand.capitalize()}")
     filtros_str = f" ({', '.join(filtros)})" if filtros else ""
-    total_encontradas = len(bikes)
-    bikes_mostradas = bikes[:10]
 
-    msg = f"🚲 <b>BICICLETAS DISPONIBLES EN STOCK{filtros_str}</b> ({len(bikes_mostradas)} de {total_encontradas} modelos)\n\n"
-    for i, b in enumerate(bikes_mostradas, 1):
+    msg = f"🚲 <b>BICICLETAS DISPONIBLES EN STOCK{filtros_str}</b>\n"
+    msg += f"<i>Mostrando {start_idx + 1}–{end_idx} de {total} modelos | Página {current_page} de {total_pages}</i>\n\n"
+
+    for i, b in enumerate(slice_bikes, start=start_idx + 1):
         nombre = f"{b['marca']} {b['modelo']}"
         oferta = int(b['precio_oferta'])
         pvp = int(b['precio_pvp'] or b['precio_oferta'])
@@ -343,10 +353,55 @@ def format_available_bikes_message(
         msg += f"   💰 <b>{oferta} €</b>{ahorro_str} | 📏 Talla: <b>{talla}</b> | 📍 <i>{tienda}</i>\n"
         msg += f"   ⚙️ {b['transmision']} | {b['frenos']}\n\n"
 
-    if total_encontradas > len(bikes_mostradas):
-        msg += f"💡 <i>Hay {total_encontradas - len(bikes_mostradas)} modelos más en stock. Usa filtros como <code>/catalogo S+</code>, <code>/catalogo 1200</code> o <code>/chollazos</code> para afinar.</i>"
-    else:
-        msg += "💡 <i>Escribe <code>/ficha [nombre]</code> para ver componentes completos y dónde comprarla.</i>"
+    # Construir teclado de paginación inline
+    keyboard_rows = []
+    nav_row = []
+    t_token = tier or "_"
+    p_token = str(int(max_price)) if max_price else "_"
+    tr_token = transmission or "_"
+
+    if current_page > 1:
+        nav_row.append({"text": "⬅️ Anterior", "callback_data": f"/page:{current_page - 1}:{t_token}:{p_token}:{tr_token}"})
+    nav_row.append({"text": f"📄 {current_page}/{total_pages}", "callback_data": f"/page:{current_page}:{t_token}:{p_token}:{tr_token}"})
+    if current_page < total_pages:
+        nav_row.append({"text": "Siguiente ➡️", "callback_data": f"/page:{current_page + 1}:{t_token}:{p_token}:{tr_token}"})
+
+    if nav_row:
+        keyboard_rows.append(nav_row)
+
+    filter_row = [
+        {"text": "⭐ Tier S+", "callback_data": f"/page:1:Tier S+:{p_token}:{tr_token}"},
+        {"text": "⚙️ 2x", "callback_data": f"/page:1:{t_token}:{p_token}:2x"},
+        {"text": "⚙️ 1x", "callback_data": f"/page:1:{t_token}:{p_token}:1x"}
+    ]
+    keyboard_rows.append(filter_row)
+
+    reply_markup = {"inline_keyboard": keyboard_rows} if keyboard_rows else None
+    return msg, reply_markup
+
+def format_available_bikes_message(
+    tier: Optional[str] = None,
+    max_price: Optional[float] = None,
+    brand: Optional[str] = None,
+    transmission: Optional[str] = None,
+    brakes: Optional[str] = None,
+    size: Optional[str] = None,
+    store_type: Optional[str] = None
+) -> str:
+    """
+    Formatea la lista de bicicletas disponibles en stock para consulta rápida.
+    """
+    msg, _ = get_paged_available_bikes_payload(
+        tier=tier,
+        max_price=max_price,
+        brand=brand,
+        transmission=transmission,
+        brakes=brakes,
+        size=size,
+        store_type=store_type,
+        page=1,
+        page_size=10
+    )
     return msg
 
 def format_bike_comparison_message(query1: str, query2: str, estatura_cm: int = 169) -> str:

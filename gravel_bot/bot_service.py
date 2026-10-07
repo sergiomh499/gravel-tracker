@@ -18,7 +18,8 @@ import urllib.error
 from gravel_bot.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from gravel_bot.db import (
     init_db, get_all_bikes, get_deals,
-    get_or_create_user, get_user_profile, update_user_profile
+    get_or_create_user, get_user_profile, update_user_profile,
+    add_size_alert, get_user_size_alerts, delete_size_alert
 )
 from gravel_bot.pipeline import run_pipeline
 from gravel_bot.geometry_sizing import get_recommended_size_dynamic
@@ -31,8 +32,9 @@ def register_bot_commands():
     if not TELEGRAM_BOT_TOKEN:
         return
     commands = [
+        {"command": "wizard", "description": "🧙‍♂️ Asistente interactivo guiado paso a paso"},
         {"command": "ranking", "description": "🏆 Podio y Tier List para tu fisionomía"},
-        {"command": "catalogo", "description": "🚲 Ver gravels en stock (ej: /catalogo S+)"},
+        {"command": "catalogo", "description": "🚲 Ver gravels en stock con paginación"},
         {"command": "chollazos", "description": "💥 Gangas por % descuento (ej: /chollazos 1200)"},
         {"command": "ficha", "description": "📄 Ficha y dónde comprar (ej: /ficha kalima)"},
         {"command": "historial", "description": "📈 Evolución de precios (ej: /historial jakar)"},
@@ -64,6 +66,7 @@ def register_bot_commands():
 MAIN_KEYBOARD = {
     "keyboard": [
         [{"text": "🏆 Ver Mi Podio"}, {"text": "🔥 Chollos <1.000€"}],
+        [{"text": "🚲 Catálogo en Stock"}, {"text": "🧙‍♂️ Configurar Asistente"}],
         [{"text": "⚙️ Biplato (2x)"}, {"text": "⚙️ Monoplato (1x)"}],
         [{"text": "⚔️ Comparar Bicis"}, {"text": "♻️ Ocasión con Garantía"}],
         [{"text": "📍 Tiendas Físicas"}, {"text": "👤 Mi Perfil"}]
@@ -129,6 +132,46 @@ PROFILE_INLINE_KEYBOARD = {
     ]
 }
 
+WIZARD_KEYBOARD_STEP1 = {
+    "inline_keyboard": [
+        [{"text": "📏 165 cm", "callback_data": "/wizard:step2:165"}, {"text": "📏 168 cm", "callback_data": "/wizard:step2:168"}, {"text": "📏 169 cm", "callback_data": "/wizard:step2:169"}],
+        [{"text": "📏 172 cm", "callback_data": "/wizard:step2:172"}, {"text": "📏 175 cm", "callback_data": "/wizard:step2:175"}, {"text": "📏 180 cm", "callback_data": "/wizard:step2:180"}]
+    ]
+}
+
+def get_wizard_step2_keyboard(estatura: int) -> Dict[str, Any]:
+    return {
+        "inline_keyboard": [
+            [{"text": "💰 800 €", "callback_data": f"/wizard:step3:{estatura}:800"}, {"text": "💰 1.000 €", "callback_data": f"/wizard:step3:{estatura}:1000"}],
+            [{"text": "💰 1.200 €", "callback_data": f"/wizard:step3:{estatura}:1200"}, {"text": "💰 1.400 €", "callback_data": f"/wizard:step3:{estatura}:1400"}],
+            [{"text": "💰 1.600 €", "callback_data": f"/wizard:step3:{estatura}:1600"}]
+        ]
+    }
+
+def get_wizard_step3_keyboard(estatura: int, presupuesto: int) -> Dict[str, Any]:
+    return {
+        "inline_keyboard": [
+            [{"text": "⚙️ Doble Plato (2x)", "callback_data": f"/wizard:step4:{estatura}:{presupuesto}:2x"}],
+            [{"text": "⚙️ Monoplato (1x)", "callback_data": f"/wizard:step4:{estatura}:{presupuesto}:1x"}],
+            [{"text": "🔄 Indiferente", "callback_data": f"/wizard:step4:{estatura}:{presupuesto}:indiferente"}]
+        ]
+    }
+
+def get_wizard_step4_keyboard(estatura: int, presupuesto: int, trans: str) -> Dict[str, Any]:
+    return {
+        "inline_keyboard": [
+            [{"text": "📍 Madrid", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Madrid"}, {"text": "📍 Barcelona", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Barcelona"}],
+            [{"text": "📍 Valencia", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Valencia"}, {"text": "📍 Sevilla", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Sevilla"}],
+            [{"text": "📍 Bilbao", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Bilbao"}, {"text": "📍 Zaragoza", "callback_data": f"/wizard:finish:{estatura}:{presupuesto}:{trans}:Zaragoza"}]
+        ]
+    }
+
+AFTER_WIZARD_KEYBOARD = {
+    "inline_keyboard": [
+        [{"text": "🏆 Ver Mi Podio Personalizado", "callback_data": "/ranking"}],
+        [{"text": "🔥 Ver Chollos Filtrados", "callback_data": "/chollazos 1000"}]
+    ]
+}
 def get_bike_inline_keyboard(bike: Dict[str, Any]) -> Dict[str, Any]:
     """Genera teclado inline de acciones para una bicicleta concreta."""
     rows = []
@@ -350,7 +393,110 @@ def _process_message(msg: Dict[str, Any]):
 
     print(f"📩 [TELEGRAM] Mensaje de @{username} ({chat_id}): '{raw_text}'")
 
-    if text in ["/start", "start", "hola", "buenas", "inicio", "empezar"]:
+    # Detección de ubicación GPS compartida en Telegram
+    loc = msg.get("location")
+    if loc:
+        lat = loc.get("latitude")
+        lon = loc.get("longitude")
+        if lat is not None and lon is not None:
+            from gravel_bot.geocoder import resolve_closest_city
+            closest_city, dist_km = resolve_closest_city(float(lat), float(lon))
+            get_or_create_user(chat_id, username)
+            update_user_profile(chat_id, zona=closest_city)
+            send_reply(
+                chat_id,
+                f"📍 <b>Ubicación GPS Detectada:</b> <code>{closest_city}</code> (~{dist_km} km de referencia).\n\n"
+                f"Tu perfil se ha actualizado a <b>{closest_city}</b>. Las tiendas físicas y ofertas locales se calcularán para tu zona.",
+                reply_markup=MAIN_KEYBOARD
+            )
+            return
+
+    if text in ["/wizard", "/configurar", "configurar", "asistente", "🧙‍♂️ configurar asistente"]:
+        send_reply(
+            chat_id,
+            "🧙‍♂️ <b>ASISTENTE DE CONFIGURACIÓN PASO A PASO (1/4)</b>\n\n"
+            "📏 <b>¿Cuál es tu estatura?</b>\n"
+            "Selecciona tu altura para calcular tu talla biomecánica exacta:",
+            reply_markup=WIZARD_KEYBOARD_STEP1
+        )
+    elif raw_text.startswith("/wizard:"):
+        parts = raw_text.split(":")
+        step = parts[1] if len(parts) > 1 else ""
+        if step == "step2" and len(parts) >= 3:
+            estatura = int(parts[2])
+            send_reply(
+                chat_id,
+                f"🧙‍♂️ <b>ASISTENTE PASO A PASO (2/4)</b>\n\n"
+                f"Estatura elegida: <b>{estatura} cm</b>\n\n"
+                f"💰 <b>¿Cuál es tu presupuesto objetivo?</b>\n"
+                f"Selecciona el límite deseado:",
+                reply_markup=get_wizard_step2_keyboard(estatura)
+            )
+        elif step == "step3" and len(parts) >= 4:
+            estatura = int(parts[2])
+            presupuesto = int(parts[3])
+            send_reply(
+                chat_id,
+                f"🧙‍♂️ <b>ASISTENTE PASO A PASO (3/4)</b>\n\n"
+                f"Estatura: <b>{estatura} cm</b> | Presupuesto: <b>{presupuesto} €</b>\n\n"
+                f"⚙️ <b>¿Qué tipo de transmisión prefieres?</b>\n"
+                f"• <b>2x (Doble plato):</b> Mayor velocidad y ritmo en asfalto.\n"
+                f"• <b>1x (Monoplato):</b> Simplicidad y retención en tierra.\n"
+                f"• <b>Indiferente:</b> Busca las mejores gangas globales.",
+                reply_markup=get_wizard_step3_keyboard(estatura, presupuesto)
+            )
+        elif step == "step4" and len(parts) >= 5:
+            estatura = int(parts[2])
+            presupuesto = int(parts[3])
+            trans = parts[4]
+            send_reply(
+                chat_id,
+                f"🧙‍♂️ <b>ASISTENTE PASO A PASO (4/4)</b>\n\n"
+                f"Estatura: <b>{estatura} cm</b> | Presupuesto: <b>{presupuesto} €</b> | Transmisión: <b>{trans}</b>\n\n"
+                f"📍 <b>¿En qué ciudad o zona estás?</b>\n"
+                f"Selecciona tu ciudad para calcular tiendas físicas y ofertas cercanas:",
+                reply_markup=get_wizard_step4_keyboard(estatura, presupuesto, trans)
+            )
+        elif step == "finish" and len(parts) >= 6:
+            estatura = int(parts[2])
+            presupuesto = float(parts[3])
+            trans = parts[4]
+            zona = parts[5]
+            get_or_create_user(chat_id, username)
+            update_user_profile(
+                chat_id,
+                estatura_cm=estatura,
+                presupuesto_max=presupuesto,
+                preferencia_transmision=trans,
+                zona=zona
+            )
+            prof = get_profile_for_chat(chat_id, username)
+            send_reply(
+                chat_id,
+                f"🎉 <b>¡CONFIGURACIÓN COMPLETADA CON ÉXITO!</b>\n\n"
+                f" • 📏 <b>Estatura:</b> <code>{estatura} cm</code> (Talla base: <b>{prof['talla_calculada']}</b>)\n"
+                f" • 💰 <b>Presupuesto:</b> <code>{int(presupuesto)} €</code>\n"
+                f" • ⚙️ <b>Transmisión:</b> <code>{trans}</code>\n"
+                f" • 📍 <b>Ubicación:</b> <code>{zona}</code>\n\n"
+                f"Toca abajo para ver tus recomendaciones personalizadas:",
+                reply_markup=AFTER_WIZARD_KEYBOARD
+            )
+    elif raw_text.startswith("/page:"):
+        parts = raw_text.split(":")
+        page_num = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+        tier_arg = None if len(parts) <= 2 or parts[2] == "_" else parts[2]
+        max_p = None if len(parts) <= 3 or parts[3] == "_" else float(parts[3])
+        trans_arg = None if len(parts) <= 4 or parts[4] == "_" else parts[4]
+        from gravel_bot.bike_inspector import get_paged_available_bikes_payload
+        msg_text, reply_kb = get_paged_available_bikes_payload(
+            tier=tier_arg,
+            max_price=max_p,
+            transmission=trans_arg,
+            page=page_num,
+            page_size=6
+        )
+        send_reply(chat_id, msg_text, reply_markup=reply_kb)
+    elif text in ["/start", "start", "hola", "buenas", "inicio", "empezar"]:
         prof = get_profile_for_chat(chat_id, username)
         h = prof["estatura_cm"]
         bud = int(prof["presupuesto_max"])
@@ -405,6 +551,10 @@ def _process_message(msg: Dict[str, Any]):
     elif any(text.startswith(cmd) for cmd in ["♻️", "ocasion", "ocasión", "/ocasion", "segunda mano"]):
         from gravel_bot.bike_inspector import format_available_bikes_message
         send_reply(chat_id, format_available_bikes_message(store_type="ocasion"), reply_markup=MAIN_KEYBOARD)
+    elif any(text.startswith(cmd) for cmd in ["🚲", "catálogo en stock", "catalogo en stock"]):
+        from gravel_bot.bike_inspector import get_paged_available_bikes_payload
+        msg_text, reply_kb = get_paged_available_bikes_payload(page=1, page_size=6)
+        send_reply(chat_id, msg_text, reply_markup=reply_kb)
 
     elif any(text.startswith(cmd) for cmd in ["📍", "tiendas", "/tiendas", "tiendas físicas"]):
         from gravel_bot.store_recommender import format_stores_recommendation_message
@@ -541,7 +691,6 @@ def _process_message(msg: Dict[str, Any]):
         if len(parts) >= 3:
             mod_query = parts[1].strip()
             size_query = parts[2].strip().upper()
-            from gravel_bot.db import add_size_alert, get_or_create_user
             user_id = get_or_create_user(chat_id, username)
             aid = add_size_alert(user_id, mod_query, size_query)
             send_reply(chat_id, f"🔔 <b>Alerta #{aid} activada:</b>\nTe avisaré en Telegram en el instante en que detectemos reposición de stock de <b>{mod_query.title()}</b> en talla <b>{size_query}</b>.\n\nPuedes ver tus alertas activas con <code>/alertas</code>.")
@@ -549,7 +698,6 @@ def _process_message(msg: Dict[str, Any]):
             send_reply(chat_id, "ℹ️ Formato: <code>/avisatalla [modelo] [talla]</code>\nEjemplos:\n • <code>/avisatalla kalima SM</code>\n • <code>/avisatalla jakar S</code>\n • <code>/avisatalla grizl XS</code>")
 
     elif any(text.startswith(cmd) for cmd in ["/alertas", "/misalertas"]):
-        from gravel_bot.db import get_user_size_alerts, get_or_create_user
         user_id = get_or_create_user(chat_id, username)
         alerts = get_user_size_alerts(user_id)
         if not alerts:
@@ -565,7 +713,6 @@ def _process_message(msg: Dict[str, Any]):
         parts = raw_text.split()
         if len(parts) >= 2 and parts[1].isdigit():
             aid = int(parts[1])
-            from gravel_bot.db import delete_size_alert, get_or_create_user
             user_id = get_or_create_user(chat_id, username)
             ok = delete_size_alert(aid, user_id)
             if ok:
@@ -720,14 +867,17 @@ def _process_message(msg: Dict[str, Any]):
                 max_p = float(p)
             else:
                 brand_arg = p
-        from gravel_bot.bike_inspector import format_available_bikes_message
-        send_reply(chat_id, format_available_bikes_message(
+        from gravel_bot.bike_inspector import get_paged_available_bikes_payload
+        msg_text, reply_kb = get_paged_available_bikes_payload(
             tier=tier_arg,
             max_price=max_p,
             brand=brand_arg,
             transmission=trans_arg,
-            brakes=brakes_arg
-        ))
+            brakes=brakes_arg,
+            page=1,
+            page_size=6
+        )
+        send_reply(chat_id, msg_text, reply_markup=reply_kb)
 
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/ficha", "/info", "/detalle", "ficha", "info"]):
         parts = raw_text.split(maxsplit=1)
