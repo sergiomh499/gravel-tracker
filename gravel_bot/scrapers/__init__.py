@@ -12,10 +12,16 @@ from gravel_bot.scrapers.outlets import OutletAggregatorScraper
 from gravel_bot.scrapers.chollometro import ChollometroScraper
 from gravel_bot.scrapers.bikediscount import BikeDiscountScraper
 from gravel_bot.scrapers.decathlon import DecathlonScraper
+from gravel_bot.scrapers.bicimarket import BicimarketScraper
+from gravel_bot.scrapers.canyon import CanyonOutletScraper
+from gravel_bot.scrapers.bicispasaje import BicispasajeScraper
 
 ACTIVE_SCRAPERS: List[BaseScraper] = [
     DecathlonScraper(),
     BikeDiscountScraper(),
+    BicimarketScraper(),
+    CanyonOutletScraper(),
+    BicispasajeScraper(),
     SanferbikeScraper(),
     FabreguesScraper(),
     MammothScraper(),
