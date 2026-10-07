@@ -150,10 +150,21 @@ if __name__ == "__main__":
         elif cmd in ["--validate", "validate"]:
             from gravel_bot.validator import run_full_catalog_validation
             run_full_catalog_validation(auto_repair=True, verbose=True)
+        elif cmd in ["--vs", "vs", "--compare"]:
+            from gravel_bot.bike_inspector import format_bike_comparison_message
+            b1 = sys.argv[2] if len(sys.argv) > 2 else "kalima"
+            b2 = sys.argv[3] if len(sys.argv) > 3 else "jakar"
+            print(format_bike_comparison_message(b1, b2))
+        elif cmd in ["--desarrollo", "desarrollo", "--cadencia"]:
+            from gravel_bot.gear_calculator import format_gear_simulation_message
+            sub = sys.argv[2] if len(sys.argv) > 2 else "2x"
+            print(format_gear_simulation_message(sub))
+        elif cmd in ["--sync-doc", "sync-doc", "--sync"]:
+            from gravel_bot.pipeline import sync_directorio_markdown
+            sync_directorio_markdown()
         elif cmd in ["--add", "add"]:
             agregar_modelo_cli()
         elif cmd in ["--bot", "bot"]:
-            from gravel_bot.bot_service import run_bot_polling
             dur = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
             run_bot_polling(duration_seconds=dur)
         elif cmd in ["--daemon", "daemon"]:

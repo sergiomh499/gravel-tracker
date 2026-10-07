@@ -70,9 +70,9 @@ gravel_bot/
 └── cli.py              # Interfaz de línea de comandos unificada
 ```
 
-### 🚀 Comandos Principales
+### 🚀 Comandos Principales (CLI)
 
-* **Ejecutar escaneo automático de tiendas y enviar alertas:**
+* **Ejecutar escaneo automático de las 17 tiendas y enviar alertas:**
   ```bash
   python3 gravel_tracker.py --scan
   ```
@@ -80,15 +80,40 @@ gravel_bot/
   ```bash
   python3 gravel_tracker.py --list "Tier S+"
   ```
+* **Comparativa 1v1 directa frente a frente:**
+  ```bash
+  python3 gravel_tracker.py --vs kalima jakar
+  ```
+* **Simulador cinemático de desarrollos y cadencia a 75/90/105 rpm:**
+  ```bash
+  python3 gravel_tracker.py --desarrollo 2x
+  python3 gravel_tracker.py --desarrollo 1x
+  ```
+* **Ver ficha técnica detallada y estadísticas de precio de un modelo:**
+  ```bash
+  python3 gravel_tracker.py --ficha "Conor Kalima"
+  ```
 * **Ver mayores gangas por porcentaje de descuento:**
   ```bash
   python3 gravel_tracker.py --deals
+  python3 gravel_tracker.py --chollos 1000  # chollos filtrados por tope
+  ```
+* **Sincronizar monitor de stock en `directorio_bicicletas.md`:**
+  ```bash
+  python3 gravel_tracker.py --sync-doc
+  ```
+* **Auditoría e integridad de datos del catálogo (auto-reparación):**
+  ```bash
+  python3 gravel_tracker.py --validate
+  ```
+* **Iniciar el Bot interactivo de Telegram (teclados, callbacks y lenguaje natural):**
+  ```bash
+  python3 gravel_tracker.py --bot
   ```
 * **Ejecutar en modo demonio (escaneo periódico en segundo plano):**
   ```bash
   python3 gravel_tracker.py --daemon
   ```
-
 ### 📲 Configuración del Bot de Telegram
 
 Para recibir las alertas instantáneas en tu móvil cuando se detecte una ganga en **Tier S+ o Tier S en talla S para 1,69 m**, define las siguientes variables de entorno:
