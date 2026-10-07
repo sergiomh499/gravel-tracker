@@ -442,8 +442,8 @@ def get_user_profile(chat_id_or_user_id: int) -> Optional[sqlite3.Row]:
         LIMIT 1
         """, (chat_id_or_user_id,))
         row = c.fetchone()
+    conn.close()
     return row
-
 def update_user_profile(chat_id_or_user_id: int, **kwargs) -> Optional[sqlite3.Row]:
     """Actualiza campos específicos del perfil ciclista por telegram_chat_id o usuario_id."""
     conn = get_connection()
