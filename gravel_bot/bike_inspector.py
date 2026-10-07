@@ -220,7 +220,14 @@ def format_database_stats_message() -> str:
 
     return msg
 
-def get_available_bikes_list(tier: Optional[str] = None, max_price: Optional[float] = None, brand: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_available_bikes_list(
+    tier: Optional[str] = None,
+    max_price: Optional[float] = None,
+    brand: Optional[str] = None,
+    transmission: Optional[str] = None,
+    brakes: Optional[str] = None,
+    size: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """
     Recupera todas las bicicletas disponibles en stock que cumplan con los filtros.
     """
@@ -245,21 +252,60 @@ def get_available_bikes_list(tier: Optional[str] = None, max_price: Optional[flo
         query += " AND LOWER(b.marca) = ?"
         params.append(brand.lower())
 
+    if transmission:
+        tr_low = transmission.lower().strip()
+        if tr_low in ["1x", "monoplato", "mono"]:
+            query += " AND b.tipo_transmision LIKE '1x%'"
+        elif tr_low in ["2x", "biplato", "doble", "dobleplato"]:
+            query += " AND b.tipo_transmision LIKE '2x%'"
+
+    if brakes:
+        br_low = brakes.lower().strip()
+        if br_low in ["hidraulico", "hidraulicos", "hydraulic"]:
+            query += " AND b.tipo_frenos = 'hidraulico'"
+        elif br_low in ["mecanico", "mecanicos"]:
+            query += " AND b.tipo_frenos IN ('mecanico_mono', 'mecanico_doble')"
+        elif br_low in ["semihidraulico", "semi"]:
+            query += " AND b.tipo_frenos = 'semihidraulico'"
+
+    if size:
+        query += " AND b.talla_recomendada_169 != 'No compatible'"
+
     query += " ORDER BY b.nota DESC, b.precio_oferta ASC"
     c.execute(query, tuple(params))
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def format_available_bikes_message(tier: Optional[str] = None, max_price: Optional[float] = None, brand: Optional[str] = None) -> str:
+def format_available_bikes_message(
+    tier: Optional[str] = None,
+    max_price: Optional[float] = None,
+    brand: Optional[str] = None,
+    transmission: Optional[str] = None,
+    brakes: Optional[str] = None,
+    size: Optional[str] = None
+) -> str:
     """
     Formatea la lista de bicicletas disponibles en stock para consulta rápida.
     """
-    bikes = get_available_bikes_list(tier=tier, max_price=max_price, brand=brand)
+    bikes = get_available_bikes_list(
+        tier=tier,
+        max_price=max_price,
+        brand=brand,
+        transmission=transmission,
+        brakes=brakes,
+        size=size
+    )
     if not bikes:
         return "ℹ️ No se encontraron bicicletas disponibles en stock con los filtros indicados."
 
     filtros = []
+    if transmission:
+        t_desc = "Monoplato (1x)" if transmission.lower() in ["1x", "monoplato", "mono"] else "Biplato (2x)"
+        filtros.append(f"⚙️ {t_desc}")
+    if brakes:
+        b_desc = "Frenos Hidráulicos" if brakes.lower() in ["hidraulico", "hidraulicos"] else "Frenos Mecánicos"
+        filtros.append(f"🛑 {b_desc}")
     if tier:
         filtros.append(f"Tier: {tier}")
     if max_price:

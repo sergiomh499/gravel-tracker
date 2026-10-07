@@ -41,10 +41,12 @@ def register_bot_commands():
         {"command": "perfil", "description": "👤 Ver tu perfil y tallaje dinámico"},
         {"command": "altura", "description": "📏 Ajustar tu estatura (ej: /altura 169)"},
         {"command": "presupuesto", "description": "💰 Ajustar presupuesto (ej: /presupuesto 1000)"},
+        {"command": "biplato", "description": "⚙️ Filtrar sólo bicis de doble plato (2x)"},
+        {"command": "monoplato", "description": "⚙️ Filtrar sólo bicis monoplato (1x)"},
+        {"command": "hidraulicos", "description": "🛑 Filtrar bicis con frenos hidráulicos"},
         {"command": "holgura", "description": "🎯 Margen para chollos (ej: /holgura 15)"},
         {"command": "transmision", "description": "⚙️ Preferencia 1x / 2x / indiferente"},
         {"command": "add", "description": "📥 Analizar bici pegando una URL"},
-        {"command": "help", "description": "ℹ️ Ayuda completa y guía de uso"}
     ]
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
@@ -439,23 +441,75 @@ def _process_message(msg: Dict[str, Any]):
             "Escribe <b>/ranking</b> o <b>/deals</b> para consultar los resultados."
         )
         send_reply(chat_id, res_text)
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/biplato", "/2x", "/dobleplato", "biplato", "2x"]):
+        parts = raw_text.split()
+        max_p = None
+        tier_arg = None
+        for p in parts[1:]:
+            if p.upper() in ["S+", "S", "A", "B", "C"]:
+                tier_arg = f"Tier {p.upper()}"
+            elif p.replace(".", "").isdigit():
+                max_p = float(p)
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(transmission="2x", tier=tier_arg, max_price=max_p))
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/monoplato", "/1x", "monoplato", "1x"]):
+        parts = raw_text.split()
+        max_p = None
+        tier_arg = None
+        for p in parts[1:]:
+            if p.upper() in ["S+", "S", "A", "B", "C"]:
+                tier_arg = f"Tier {p.upper()}"
+            elif p.replace(".", "").isdigit():
+                max_p = float(p)
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(transmission="1x", tier=tier_arg, max_price=max_p))
+
+    elif any(raw_text.lower().startswith(cmd) for cmd in ["/hidraulicos", "/hidraulico", "/frenoshidraulicos", "hidraulicos"]):
+        parts = raw_text.split()
+        max_p = None
+        tier_arg = None
+        for p in parts[1:]:
+            if p.upper() in ["S+", "S", "A", "B", "C"]:
+                tier_arg = f"Tier {p.upper()}"
+            elif p.replace(".", "").isdigit():
+                max_p = float(p)
+        from gravel_bot.bike_inspector import format_available_bikes_message
+        send_reply(chat_id, format_available_bikes_message(brakes="hidraulico", tier=tier_arg, max_price=max_p))
+
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/catalogo", "/disponibles", "/bicis", "/stock", "catalogo", "disponibles"]):
         parts = raw_text.split()
         tier_arg = None
         max_p = None
         brand_arg = None
-        if len(parts) > 1:
-            arg = parts[1].strip()
-            if arg.upper() in ["S+", "S", "A", "B", "C"]:
-                tier_arg = f"Tier {arg.upper()}"
-            elif "tier" in arg.lower():
-                tier_arg = " ".join(parts[1:]).title()
-            elif arg.replace(".", "").isdigit():
-                max_p = float(arg)
+        trans_arg = None
+        brakes_arg = None
+        for p in parts[1:]:
+            p_low = p.lower()
+            if p.upper() in ["S+", "S", "A", "B", "C"]:
+                tier_arg = f"Tier {p.upper()}"
+            elif "tier" in p_low:
+                tier_arg = p.title()
+            elif p_low in ["1x", "monoplato", "mono"]:
+                trans_arg = "1x"
+            elif p_low in ["2x", "biplato", "doble", "dobleplato"]:
+                trans_arg = "2x"
+            elif p_low in ["hidraulico", "hidraulicos", "hydraulic"]:
+                brakes_arg = "hidraulico"
+            elif p_low in ["mecanico", "mecanicos"]:
+                brakes_arg = "mecanico"
+            elif p.replace(".", "").isdigit():
+                max_p = float(p)
             else:
-                brand_arg = arg
+                brand_arg = p
         from gravel_bot.bike_inspector import format_available_bikes_message
-        send_reply(chat_id, format_available_bikes_message(tier=tier_arg, max_price=max_p, brand=brand_arg))
+        send_reply(chat_id, format_available_bikes_message(
+            tier=tier_arg,
+            max_price=max_p,
+            brand=brand_arg,
+            transmission=trans_arg,
+            brakes=brakes_arg
+        ))
 
     elif any(raw_text.lower().startswith(cmd) for cmd in ["/ficha", "/info", "/detalle", "ficha", "info"]):
         parts = raw_text.split(maxsplit=1)
