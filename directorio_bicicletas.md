@@ -40,25 +40,25 @@
 ---
 
 ### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
-*Última sincronización robótica:* `2026-10-08 00:10:54` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+*Última sincronización robótica:* `2026-10-08 13:20:58` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
 
 | # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
 | 1 | [MMR X-Grip 30 Charcoal](https://www.elcorteingles.es/deportes/A200805188-gris-negro-pr-bicicleta-de-gravel-unisex-x-grip-30-charcoal-mmr/) | **1299.0 €** ** | **Tier S+** | 9.8/10 | S (Estricta) | El Corte Inglés Deportes | 🟢 En Stock |
-| 2 | [Kross Esker 6.0 GRX 2x11v](https://www.tradeinn.com/bikeinn/es/kross-esker-6.0-700-grx-rx820-2025-gravel-bike/141928636/p) | **1299.0 €** *(1799.0 €)* | **Tier S+** | 9.5/10 | S (51-52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
-| 3 | [Orbea Terra H40](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier S+** | 9.5/10 | S (51 cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
-| 4 | [Conor Gravel Conor Kalima GRX610 2x12](https://www.bicimarket.com/es/bicicletas/gravel/57969-conor-kalima-grx610-2x12.html) | **1199.0 €** ** | **Tier S+** | 9.5/10 | SM (51 cm) | Bicimarket Red Nacional | 🟢 En Stock |
-| 5 | [R-Raymon Territ Comp](https://www.alltricks.es/F-41505-velos-route-_-cyclocross-_-triathlon/P-3274261-raymon_territ_comp_gravel_bike_shimano_cues_10s_700_mm_black_green_2026) | **999.0 €** *(1299.0 €)* | **Tier S** | 8.9/10 | S (52 cm) | Alltricks España | 🟢 En Stock |
-| 6 | [Kross Esker 2.0 (GEN2)](https://www.elcorteingles.es/deportes/A201469055-gris-blanco-pr-bicicleta-de-gravel-de-hombre-esker-20-kross/) | **1049.0 €** *(1199.0 €)* | **Tier S** | 8.9/10 | S (51-52 cm) | El Corte Inglés Deportes | 🟢 En Stock |
-| 7 | [Triban GRVL 520 Subcompact](https://www.decathlon.es/es/p/bicicleta-de-gravel-cuadro-aluminio-shimano-105-triban-grvl-520/) | **1099.0 €** *(1199.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
-| 8 | [Corredor Bici Corredor GR-Cinco Gravel Celeste Brillo](https://cicloscorredor.com/es/p/bici-gravel-corredor-gr-cinco-celeste-mate) | **1199.0 €** *(1999.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Ciclos Corredor Vallecas | 🟢 En Stock |
-| 9 | [Corredor Bici Corredor GR-Cinco Gravel Azul Mate](https://cicloscorredor.com/es/p/bici-gravel-corredor-gr-cinco-azul-mate) | **1199.0 €** *(1999.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Ciclos Corredor Vallecas | 🟢 En Stock |
-| 10 | [Orbea Terra H40 (Calmera Talla M)](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier A** | 7.9/10 | M (Inadecuada 173-179cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
-| 11 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier A** | 7.8/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
-| 12 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier A** | 7.8/10 | S (52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
-| 13 | [Trek Checkpoint ALR 3 Gen 3 2026](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-trek-checkpoint-alr-3-gen-3-2026#/40-talla-xs/86069-color-granate) | **1039.2 €** *(1299.0 €)* | **Tier A** | 7.8/10 | 52 cm | Fabregues Bicicletas | 🟢 En Stock |
-| 14 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
-| 15 | [Triban Gravel Triban RC 520 All-Road Shimano 10](https://www.decathlon.es/es/p/bicicleta-de-carretera-triban-rc-520-aluminio-105-11v-freno-disco/_/R-p-301734) | **899.0 €** ** | **Tier A** | 7.8/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 2 | [Megamo Jakar 30 GRX (Reacondicionada Certificada)](https://tuvalum.com/collections/bicicletas-gravel/products/megamo-jakar-30) | **990.0 €** *(1499.0 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 3 | [Kross Esker 6.0 GRX 2x11v](https://www.tradeinn.com/bikeinn/es/kross-esker-6.0-700-grx-rx820-2025-gravel-bike/141928636/p) | **1299.0 €** *(1799.0 €)* | **Tier S+** | 9.5/10 | S (51-52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 4 | [Orbea Terra H40](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier S+** | 9.5/10 | S (51 cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
+| 5 | [Conor Gravel Conor Kalima GRX610 2x12](https://www.bicimarket.com/es/bicicletas/gravel/57969-conor-kalima-grx610-2x12.html) | **1199.0 €** ** | **Tier S+** | 9.5/10 | SM (51 cm) | Bicimarket Red Nacional | 🟢 En Stock |
+| 6 | [R-Raymon Territ Comp](https://www.alltricks.es/F-41505-velos-route-_-cyclocross-_-triathlon/P-3274261-raymon_territ_comp_gravel_bike_shimano_cues_10s_700_mm_black_green_2026) | **999.0 €** *(1299.0 €)* | **Tier S** | 8.9/10 | S (52 cm) | Alltricks España | 🟢 En Stock |
+| 7 | [Kross Esker 2.0 (GEN2)](https://www.elcorteingles.es/deportes/A201469055-gris-blanco-pr-bicicleta-de-gravel-de-hombre-esker-20-kross/) | **1049.0 €** *(1199.0 €)* | **Tier S** | 8.9/10 | S (51-52 cm) | El Corte Inglés Deportes | 🟢 En Stock |
+| 8 | [Triban GRVL 520 Subcompact](https://www.decathlon.es/es/p/bicicleta-de-gravel-cuadro-aluminio-shimano-105-triban-grvl-520/) | **1099.0 €** *(1199.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 9 | [Corredor Bici Corredor GR-Cinco Gravel Celeste Brillo](https://cicloscorredor.com/es/p/bici-gravel-corredor-gr-cinco-celeste-mate) | **1199.0 €** *(1999.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Ciclos Corredor Vallecas | 🟢 En Stock |
+| 10 | [Corredor Bici Corredor GR-Cinco Gravel Azul Mate](https://cicloscorredor.com/es/p/bici-gravel-corredor-gr-cinco-azul-mate) | **1199.0 €** *(1999.0 €)* | **Tier S** | 8.5/10 | S (51-52 cm) | Ciclos Corredor Vallecas | 🟢 En Stock |
+| 11 | [Orbea Terra H40 (Calmera Talla M)](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier A** | 7.9/10 | M (Inadecuada 173-179cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
+| 12 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier A** | 7.8/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
+| 13 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier A** | 7.8/10 | S (52 cm) | Red Outlets Ciclismo España | 🟢 En Stock |
+| 14 | [Trek Checkpoint ALR 3 Gen 3 2026](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-trek-checkpoint-alr-3-gen-3-2026#/40-talla-xs/86069-color-granate) | **1039.2 €** *(1299.0 €)* | **Tier A** | 7.8/10 | 52 cm | Fabregues Bicicletas | 🟢 En Stock |
+| 15 | [BH Gravelx Alu 1.0 |LG103| 2023](https://fabreguesbicicletas.com/es/gravel-cx/bicicleta-bh-gravelx-alu-10-lg103-2023#/109-color-rojo/131-talla-la) | **999.0 €** *(1599.9 €)* | **Tier A** | 7.8/10 | S (51-52 cm) | Fabregues Bicicletas | 🟢 En Stock |
 
 ---
 
