@@ -75,17 +75,28 @@ def init_db():
         c3_cuadro REAL,
         c4_precio REAL,
         c5_talla REAL,
+        c6_garantia REAL DEFAULT 0.0,
         puntuacion_total REAL,
         nota REAL,
         tier TEXT NOT NULL,
-        notas_veredicto TEXT
+        notas_veredicto TEXT,
+        fecha_auditoria TEXT,
+        audit_status TEXT DEFAULT 'pendiente',
+        especificaciones_verificadas INTEGER DEFAULT 0
     );
     """)
-    # Migración en caliente: soporte para tallas_disponibles en catálogo
-    try:
-        c.execute("ALTER TABLE bicicletas ADD COLUMN tallas_disponibles TEXT")
-    except Exception:
-        pass
+    # Migraciones en caliente para compatibilidad y auditoría de catálogo
+    for col_name, col_type in [
+        ("tallas_disponibles", "TEXT"),
+        ("c6_garantia", "REAL DEFAULT 0.0"),
+        ("fecha_auditoria", "TEXT"),
+        ("audit_status", "TEXT DEFAULT 'pendiente'"),
+        ("especificaciones_verificadas", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            c.execute(f"ALTER TABLE bicicletas ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass
 
 
     # Tabla historial_precios
@@ -255,8 +266,11 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             cuadro = ?, horquilla = ?, ejes = ?, patilla_udh = ?,
             talla_recomendada_169 = ?, tallas_disponibles = ?, precio_pvp = ?, precio_oferta = ?,
             tienda_id = ?, url_oferta = ?, en_stock = ?,
-            c1_frenos = ?, c2_transmision = ?, c3_cuadro = ?, c4_precio = ?, c5_talla = ?,
-            puntuacion_total = ?, nota = ?, tier = ?, notas_veredicto = ?
+            c1_frenos = ?, c2_transmision = ?, c3_cuadro = ?, c4_precio = ?, c5_talla = ?, c6_garantia = ?,
+            puntuacion_total = ?, nota = ?, tier = ?, notas_veredicto = ?,
+            fecha_auditoria = COALESCE(?, fecha_auditoria),
+            audit_status = COALESCE(?, audit_status),
+            especificaciones_verificadas = COALESCE(?, especificaciones_verificadas)
         WHERE id = ?
         """, (
             b["marca"], b["modelo"], b.get("ano", 2025), b.get("disciplina", "gravel"),
@@ -266,7 +280,9 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
             b.get("tienda_id"), b.get("url_oferta", ""), b.get("en_stock", 1),
             b["c1_frenos"], b["c2_transmision"], b["c3_cuadro"], b["c4_precio"], b["c5_talla"],
+            b.get("c6_garantia", 0.0),
             b["puntuacion_total"], b["nota"], b["tier"], b.get("notas_veredicto", ""),
+            b.get("fecha_auditoria"), b.get("audit_status"), b.get("especificaciones_verificadas"),
             bike_id
         ))
     else:
@@ -277,10 +293,11 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             cuadro, horquilla, ejes, patilla_udh,
             talla_recomendada_169, tallas_disponibles, precio_pvp, precio_oferta,
             tienda_id, url_oferta, en_stock,
-            c1_frenos, c2_transmision, c3_cuadro, c4_precio, c5_talla,
-            puntuacion_total, nota, tier, notas_veredicto
+            c1_frenos, c2_transmision, c3_cuadro, c4_precio, c5_talla, c6_garantia,
+            puntuacion_total, nota, tier, notas_veredicto,
+            fecha_auditoria, audit_status, especificaciones_verificadas
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         """, (
             b["slug"], b["marca"], b["modelo"], b.get("ano", 2025), b.get("disciplina", "gravel"),
@@ -290,7 +307,10 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
             b.get("tienda_id"), b.get("url_oferta", ""), b.get("en_stock", 1),
             b["c1_frenos"], b["c2_transmision"], b["c3_cuadro"], b["c4_precio"], b["c5_talla"],
-            b["puntuacion_total"], b["nota"], b["tier"], b.get("notas_veredicto", "")
+            b.get("c6_garantia", 0.0),
+            b["puntuacion_total"], b["nota"], b["tier"], b.get("notas_veredicto", ""),
+            b.get("fecha_auditoria"), b.get("audit_status", "pendiente"),
+            b.get("especificaciones_verificadas", 0)
         ))
         bike_id = c.lastrowid
 
@@ -298,6 +318,65 @@ def upsert_bike(b: Dict[str, Any]) -> int:
     conn.close()
     return bike_id
 
+
+def update_bike_audit_status(bike_id: int, audit_status: str, in_stock: int, live_price: Optional[float] = None, notes: str = ""):
+    """Actualiza el estado de auditoría viva (verificado, sin_stock, enlace_caido) y precio live."""
+    conn = get_connection()
+    c = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if live_price is not None:
+        c.execute("""
+            UPDATE bicicletas SET
+                audit_status = ?, en_stock = ?, precio_oferta = ?, fecha_auditoria = ?,
+                notas_veredicto = CASE WHEN ? != '' THEN ? ELSE notas_veredicto END
+            WHERE id = ?
+        """, (audit_status, in_stock, live_price, now_str, notes, notes, bike_id))
+    else:
+        c.execute("""
+            UPDATE bicicletas SET
+                audit_status = ?, en_stock = ?, fecha_auditoria = ?,
+                notas_veredicto = CASE WHEN ? != '' THEN ? ELSE notas_veredicto END
+            WHERE id = ?
+        """, (audit_status, in_stock, now_str, notes, notes, bike_id))
+    conn.commit()
+    conn.close()
+
+def update_bike_rescore(bike_id: int, c1: float, c2: float, c3: float, c4: float, c5: float, c6: float,
+                        puntuacion_total: float, nota: float, tier: str, notas_veredicto: str = ""):
+    """Actualiza la puntuación calibrada C1..C6 y el tier de una bicicleta."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE bicicletas SET
+            c1_frenos = ?, c2_transmision = ?, c3_cuadro = ?, c4_precio = ?, c5_talla = ?, c6_garantia = ?,
+            puntuacion_total = ?, nota = ?, tier = ?,
+            notas_veredicto = CASE WHEN ? != '' THEN ? ELSE notas_veredicto END
+        WHERE id = ?
+    """, (c1, c2, c3, c4, c5, c6, puntuacion_total, nota, tier, notas_veredicto, notas_veredicto, bike_id))
+    conn.commit()
+    conn.close()
+
+def update_bike_specs(bike_id: int, transmision: str, tipo_transmision: str, frenos: str, tipo_frenos: str,
+                      cuadro: str, horquilla: str, precio_pvp: Optional[float] = None):
+    """Actualiza y normaliza las especificaciones técnicas corregidas por la matriz de autoridad."""
+    conn = get_connection()
+    c = conn.cursor()
+    if precio_pvp is not None:
+        c.execute("""
+            UPDATE bicicletas SET
+                transmision = ?, tipo_transmision = ?, frenos = ?, tipo_frenos = ?,
+                cuadro = ?, horquilla = ?, precio_pvp = ?, especificaciones_verificadas = 1
+            WHERE id = ?
+        """, (transmision, tipo_transmision, frenos, tipo_frenos, cuadro, horquilla, precio_pvp, bike_id))
+    else:
+        c.execute("""
+            UPDATE bicicletas SET
+                transmision = ?, tipo_transmision = ?, frenos = ?, tipo_frenos = ?,
+                cuadro = ?, horquilla = ?, especificaciones_verificadas = 1
+            WHERE id = ?
+        """, (transmision, tipo_transmision, frenos, tipo_frenos, cuadro, horquilla, bike_id))
+    conn.commit()
+    conn.close()
 def record_price(bike_id: int, store_id: Optional[int], price: float, size: str, in_stock: int, url: str, note: str = ""):
     conn = get_connection()
     c = conn.cursor()

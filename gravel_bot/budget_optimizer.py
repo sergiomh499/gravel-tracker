@@ -47,7 +47,14 @@ class CleanCandidateBike:
     rubric_nota: float
     rubric_tier: str
     vfm_index: float
-
+    audit_status: str = "pendiente"
+    especificaciones_verificadas: int = 0
+    c1_frenos: float = 0.0
+    c2_transmision: float = 0.0
+    c3_cuadro: float = 0.0
+    c4_precio: float = 0.0
+    c5_talla: float = 0.0
+    c6_garantia: float = 0.0
 
 @dataclass
 class RecommendationPodio:
@@ -200,9 +207,16 @@ def clean_candidate_from_row(row: Any, rider_height_cm: int = 169, target_size: 
         rubric_score=score,
         rubric_nota=nota,
         rubric_tier=tier,
-        vfm_index=vfm
+        vfm_index=vfm,
+        audit_status=row["audit_status"] if ("audit_status" in row.keys() and row["audit_status"]) else "pendiente",
+        especificaciones_verificadas=int(row["especificaciones_verificadas"]) if ("especificaciones_verificadas" in row.keys() and row["especificaciones_verificadas"]) else 0,
+        c1_frenos=float(row["c1_frenos"] or 0.0) if "c1_frenos" in row.keys() else 0.0,
+        c2_transmision=float(row["c2_transmision"] or 0.0) if "c2_transmision" in row.keys() else 0.0,
+        c3_cuadro=float(row["c3_cuadro"] or 0.0) if "c3_cuadro" in row.keys() else 0.0,
+        c4_precio=float(row["c4_precio"] or 0.0) if "c4_precio" in row.keys() else 0.0,
+        c5_talla=float(row["c5_talla"] or 0.0) if "c5_talla" in row.keys() else 0.0,
+        c6_garantia=float(row["c6_garantia"] or 0.0) if "c6_garantia" in row.keys() else 0.0
     )
-
 
 def optimize_for_budget(
     budget: float,

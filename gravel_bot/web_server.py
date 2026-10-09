@@ -30,15 +30,21 @@ def get_sanitized_catalog_dict() -> List[Dict[str, Any]]:
 
 
 def get_catalog_stats_dict() -> Dict[str, Any]:
-    """Calcula estadísticas generales del catálogo de gravels activas."""
+    """Calcula estadísticas generales del catálogo de gravels activas con métricas de auditoría."""
     bikes = get_sanitized_catalog_dict()
     prices = [b["price"] for b in bikes if b["price"] > 0]
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT audit_status, COUNT(*) FROM bicicletas GROUP BY audit_status")
+    audit_summary = {r[0] or "pendiente": r[1] for r in c.fetchall()}
+    conn.close()
     return {
         "status": "success",
         "total_active_gravel": len(bikes),
         "min_price": min(prices) if prices else 0.0,
         "max_price": max(prices) if prices else 0.0,
-        "avg_price": round(sum(prices) / len(prices), 1) if prices else 0.0
+        "avg_price": round(sum(prices) / len(prices), 1) if prices else 0.0,
+        "audit_summary": audit_summary
     }
 
 
@@ -182,6 +188,20 @@ class GravelWebRequestHandler(SimpleHTTPRequestHandler):
                     self.send_json_response({"status": "error", "message": "Bicicletas no encontradas"}, 404)
             except Exception as e:
                 self.send_json_response({"status": "error", "message": str(e)}, 400)
+            return
+
+        # 5. API: Ficha de inspección y desglose C1..C6
+        if path in ["/api/card", "/api/itemized"]:
+            from gravel_bot.evaluator import get_itemized_score_card
+            from gravel_bot.bike_inspector import get_detailed_bike_info
+            b_id = query.get("id", [None])[0]
+            if b_id:
+                info = get_detailed_bike_info(b_id)
+                if info:
+                    card = get_itemized_score_card(info)
+                    self.send_json_response({"status": "success", "card": card})
+                    return
+            self.send_json_response({"status": "error", "message": "Bicicleta no encontrada"}, 404)
             return
 
         # 5. Archivos estáticos de frontend

@@ -131,17 +131,24 @@ def format_detailed_bike_card(identifier: Any) -> str:
     if tallas_disp and tallas_disp not in ["Consultar tienda", ""]:
         msg += f" • <b>Tallas en Stock:</b> <code>{tallas_disp}</code>\n"
     # Sección 3: Valoración y Rúbrica
-    msg += f"\n🏆 <b>VALORACIÓN Y RÚBRICA MADRID 50/50:</b>\n"
+    msg += f"\n🏆 <b>VALORACIÓN Y RÚBRICA CALIBRADA C1..C6:</b>\n"
     msg += f" • <b>Clasificación:</b> <b>{bike.get('tier', 'Tier S')}</b>\n"
     msg += f" • <b>Puntuación Global:</b> <b>{bike.get('nota', 0.0)} / 10</b> ({bike.get('puntuacion_total', 0)}/100 pts)\n"
-    msg += f"   - Frenos (25%): <code>{bike.get('c1_frenos', 0)}/25</code>\n"
-    msg += f"   - Transmisión 50/50 (25%): <code>{bike.get('c2_transmision', 0)}/25</code>\n"
-    msg += f"   - Cuadro & Horquilla (20%): <code>{bike.get('c3_cuadro', 0)}/20</code>\n"
-    msg += f"   - Relación Precio (20%): <code>{bike.get('c4_precio', 0)}/20</code>\n"
-    msg += f"   - Talla & Geometría (10%): <code>{bike.get('c5_talla', 0)}/10</code>\n"
+    msg += f"   - C1 Frenos (25 pts): <code>{bike.get('c1_frenos', 0)}/25</code>\n"
+    msg += f"   - C2 Transmisión 50/50 (25 pts): <code>{bike.get('c2_transmision', 0)}/25</code>\n"
+    msg += f"   - C3 Cuadro & Horquilla (20 pts): <code>{bike.get('c3_cuadro', 0)}/20</code>\n"
+    msg += f"   - C4 Relación Precio VFM (20 pts): <code>{bike.get('c4_precio', 0)}/20</code>\n"
+    msg += f"   - C5 Talla 1,69 m (10 pts): <code>{bike.get('c5_talla', 0)}/10</code>\n"
+    c6_val = float(bike.get('c6_garantia') or 0.0)
+    msg += f"   - C6 Garantía & Canal (+5 pts bonus): <code>+{c6_val:.1f}/5</code>\n"
+    if bike.get('especificaciones_verificadas'):
+        msg += " • 🛡️ <i>Especificaciones verificadas contra matriz de autoridad técnica</i>\n"
+    if bike.get('audit_status'):
+        status_icon = "✅ Verificado en stock" if bike.get('audit_status') == "verificado" else ("⚠️ Sin stock" if bike.get('audit_status') == "sin_stock" else f"🔍 {str(bike.get('audit_status')).capitalize()}")
+        fecha_aud = f" ({bike.get('fecha_auditoria')})" if bike.get('fecha_auditoria') else ""
+        msg += f" • 🌐 <i>Estado de Enlace: {status_icon}{fecha_aud}</i>\n"
     if bike.get('notas_veredicto'):
         msg += f" • <i>Veredicto: {bike['notas_veredicto']}</i>\n"
-
     # Sección 4: Estadísticas de precio
     msg += f"\n📊 <b>ESTADÍSTICAS HISTÓRICAS DEL MODELO:</b>\n"
     msg += f" • Mínimo histórico detectado: <b>{int(bike['min_historico'])} €</b>\n"

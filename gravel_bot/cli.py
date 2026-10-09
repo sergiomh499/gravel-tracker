@@ -82,6 +82,56 @@ def cmd_web(args):
     host = getattr(args, "host", "127.0.0.1") or "127.0.0.1"
     run_web_server(port=port, host=host)
 
+def cmd_audit(args):
+    init_db()
+    from gravel_bot.catalog_auditor import run_catalog_audit
+    limit_val = None if getattr(args, "all", False) else getattr(args, "limit", 20)
+    store_val = getattr(args, "tienda", None)
+    force_val = getattr(args, "force", False)
+
+    print("\n" + "="*80)
+    print("🔍 INICIANDO AUDITORÍA VIVA DEL CATÁLOGO (Stock & Enlaces)")
+    print("="*80)
+    if store_val:
+        print(f"Tienda filtrada: {store_val}")
+    if limit_val:
+        print(f"Límite de comprobaciones: {limit_val}")
+    print(f"Modo forzado (ignorar 24h previas): {'Sí' if force_val else 'No'}\n")
+
+    def on_progress(cur, tot, res):
+        tag = "✅" if res.audit_status == "verificado" else ("⚠️" if res.audit_status == "sin_stock" else "❌")
+        price_str = f"{res.live_price:.0f}€" if res.live_price else "-"
+        print(f"[{cur}/{tot}] {tag} ID {res.bike_id:<3} | {res.audit_status:<12} | {price_str:<6} | {res.url[:45]}")
+
+    report = run_catalog_audit(limit=limit_val, store_filter=store_val, force=force_val, progress_callback=on_progress)
+    print("\n" + "="*80)
+    print("📊 RESUMEN DE AUDITORÍA DEL CATÁLOGO")
+    print("="*80)
+    print(f"Total analizados:       {report['auditados']}")
+    print(f"Activos y en stock:     {report['verificados_ok']}")
+    print(f"Agotados / Sin stock:   {report['sin_stock']}")
+    print(f"Enlaces caídos:         {report['enlaces_caidos']}")
+    print(f"Precios actualizados:   {report['precios_actualizados']}")
+    print(f"Pendientes anti-bot:    {report['pendientes_antiban']}")
+    print(f"Tiempo total:           {report['duracion_segundos']} s")
+    print("="*80 + "\n")
+
+def cmd_rescore(args):
+    init_db()
+    from gravel_bot.evaluator import run_catalog_rescore
+    dry_run = getattr(args, "dry_run", False)
+    print("\n" + "="*80)
+    print(f"⚖️ RECALCULANDO RÚBRICA CALIBRADA C1..C6 {'(MODO DRY-RUN)' if dry_run else ''}")
+    print("="*80)
+    res = run_catalog_rescore(dry_run=dry_run)
+    print(f"Total bicicletas procesadas: {res['total_bikes']}")
+    print("\nDistribución de Tiers:")
+    for tier_name, count in sorted(res['tier_counts'].items()):
+        print(f" * {tier_name:<10}: {count} modelos")
+    if not dry_run:
+        print("\n✅ Base de datos actualizada con puntuaciones calibradas C1..C6 y factor garantía.")
+    print("="*80 + "\n")
+
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
     deep_scan = getattr(args, "deep", False)
@@ -144,6 +194,17 @@ def main():
     parser_web.add_argument("--port", "-p", type=int, default=8080, help="Puerto del servidor (default 8080)")
     parser_web.add_argument("--host", type=str, default="127.0.0.1", help="Host del servidor (default 127.0.0.1)")
 
+
+    # audit
+    parser_audit = subparsers.add_parser("audit", help="Auditar enlaces en vivo y disponibilidad de stock")
+    parser_audit.add_argument("--limit", "-l", type=int, default=20, help="Límite de comprobaciones (default 20)")
+    parser_audit.add_argument("--all", action="store_true", help="Auditar todos los enlaces del catálogo")
+    parser_audit.add_argument("--tienda", "-t", "--store", type=str, default=None, help="Filtrar por tienda específica")
+    parser_audit.add_argument("--force", "-f", action="store_true", help="Forzar auditoría ignorando últimas 24h")
+
+    # re-score
+    parser_rescore = subparsers.add_parser("re-score", aliases=["rescore"], help="Recalcular rúbrica calibrada C1..C6 con factor garantía")
+    parser_rescore.add_argument("--dry-run", action="store_true", help="Simular sin escribir en la base de datos")
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -160,6 +221,10 @@ def main():
         cmd_budget(args)
     elif args.command in ["web", "dashboard", "ui"]:
         cmd_web(args)
+    elif args.command == "audit":
+        cmd_audit(args)
+    elif args.command in ["re-score", "rescore"]:
+        cmd_rescore(args)
     else:
         # Default: mostrar listado
         cmd_list(args)

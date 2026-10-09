@@ -596,5 +596,177 @@ class TestWebServerAndDashboard(unittest.TestCase):
         req_rec = urllib.request.urlopen(f"{self.base_url}/api/recommend?budget=1200")
         rec = json.loads(req_rec.read().decode("utf-8"))
         self.assertIn("status", rec)
+
+class TestCatalogAuditAndRankingCalibration(unittest.TestCase):
+    """Suite de pruebas para la característica 003: Auditoría de Catálogo y Rúbrica Calibrada."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_components_authority_mapping_and_fake_hydraulic_correction(self):
+        """Verifica la corrección de falsos frenos hidráulicos y acotación de PVP (T050, T058, T059)."""
+        from gravel_bot.components_authority import get_canonical_group_spec, sanitize_bike_specs
+
+        # 1. Mapeo canónico
+        spec_claris = get_canonical_group_spec("Shimano Claris R2000")
+        self.assertIsNotNone(spec_claris)
+        self.assertEqual(spec_claris.actuation, "mecanico")
+        self.assertEqual(spec_claris.family, "shimano")
+
+        spec_grx = get_canonical_group_spec("Shimano GRX RX400")
+        self.assertIsNotNone(spec_grx)
+        self.assertEqual(spec_grx.actuation, "hidraulico")
+
+        # 2. Corrección de falso hidráulico
+        fake_ad = {
+            "id": 999,
+            "marca": "Megamo",
+            "modelo": "Jakar 30",
+            "transmision": "Shimano Claris",
+            "tipo_transmision": "2x8",
+            "frenos": "Frenos de disco mecánicos",
+            "tipo_frenos": "hidraulico",  # Falso hidráulico erróneo
+            "cuadro": "Carbono completo",
+            "horquilla": "Carbono",
+            "precio_pvp": 3500.0,  # PVP inflado absurdo para Claris
+            "precio_oferta": 899.0
+        }
+        sanitized = sanitize_bike_specs(fake_ad)
+        self.assertNotEqual(sanitized["tipo_frenos"], "hidraulico")
+        self.assertIn("mecanico", sanitized["tipo_frenos"])
+        self.assertIn("Aluminio", sanitized["cuadro"])
+        self.assertLessEqual(sanitized["precio_pvp"], 1200.0)
+        self.assertEqual(sanitized["especificaciones_verificadas"], 1)
+        self.assertIn("[Audit]", sanitized["notas_veredicto"])
+
+    def test_frame_material_cross_validation(self):
+        """Verifica la corrección de materiales de cuadro conocidos (T060)."""
+        from gravel_bot.components_authority import cross_validate_frame_material
+
+        c_jakar = cross_validate_frame_material("Megamo Jakar 20", "Carbono completo")
+        self.assertIn("Aluminio", c_jakar)
+
+        c_grizl_al = cross_validate_frame_material("Canyon Grizl AL 7", "Carbono monocasco")
+        self.assertIn("Aluminio", c_grizl_al)
+
+        c_west = cross_validate_frame_material("Megamo West 10", "Aluminio")
+        self.assertIn("Carbono", c_west)
+
+    def test_live_stock_and_price_detection(self):
+        """Verifica la detección de stock y extracción de precios en HTML (T051, T053, T054)."""
+        from gravel_bot.catalog_auditor import detect_stock_status, extract_price_from_html
+
+        html_in_stock = """
+        <html>
+          <head><meta property="product:price:amount" content="1249.00"></head>
+          <body><button class="add-to-cart">Añadir al carrito</button></body>
+        </html>
+        """
+        price = extract_price_from_html(html_in_stock)
+        in_stock, status = detect_stock_status(html_in_stock)
+        self.assertEqual(price, 1249.0)
+        self.assertEqual(in_stock, 1)
+        self.assertEqual(status, "verificado")
+
+        html_out_of_stock = """
+        <html>
+          <body><div class="out-of-stock">Producto agotado temporalmente</div></body>
+        </html>
+        """
+        in_stock_out, status_out = detect_stock_status(html_out_of_stock)
+        self.assertEqual(in_stock_out, 0)
+        self.assertEqual(status_out, "sin_stock")
+
+    def test_calibrated_rubric_c1_c6_and_warranty_bonus(self):
+        """Verifica el cálculo de la rúbrica calibrada C1..C6 con bonus por canal/garantía (T063, T064)."""
+        from gravel_bot.evaluator import calcular_rubrica_calibrada
+
+        bike_fisica = {
+            "disciplina": "gravel",
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x11",
+            "cuadro": "Aluminio hidroformado",
+            "horquilla": "Carbono",
+            "patilla_udh": 0,
+            "precio_oferta": 999.0,
+            "talla_recomendada_169": "S",
+            "tienda_tipo": "fisica"
+        }
+        res_fisica = calcular_rubrica_calibrada(bike_fisica)
+        self.assertEqual(res_fisica["c1_frenos"], 25.0)
+        self.assertEqual(res_fisica["c2_transmision"], 25.0)
+        self.assertEqual(res_fisica["c6_garantia"], 5.0)
+        self.assertGreaterEqual(res_fisica["puntuacion_total"], 90.0)
+        self.assertEqual(res_fisica["tier"], "Tier S+")
+
+        bike_particular = dict(bike_fisica)
+        bike_particular["tienda_tipo"] = "particular"
+        res_part = calcular_rubrica_calibrada(bike_particular)
+        self.assertEqual(res_part["c6_garantia"], 0.0)
+        self.assertLess(res_part["puntuacion_total"], res_fisica["puntuacion_total"])
+
+    def test_itemized_score_card_generator(self):
+        """Verifica la generación de la ficha desglosada C1..C6 (T065)."""
+        from gravel_bot.evaluator import get_itemized_score_card
+
+        sample_bike = {
+            "id": 1,
+            "marca": "Megamo",
+            "modelo": "Jakar 30",
+            "disciplina": "gravel",
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x10",
+            "cuadro": "Aluminio",
+            "horquilla": "Carbono",
+            "precio_oferta": 1099.0,
+            "talla_recomendada_169": "S",
+            "tienda_nombre": "Mammoth Bikes",
+            "tienda_tipo": "fisica",
+            "especificaciones_verificadas": 1
+        }
+        card = get_itemized_score_card(sample_bike)
+        self.assertIn("c1", card)
+        self.assertIn("c2", card)
+        self.assertIn("c3", card)
+        self.assertIn("c4", card)
+        self.assertIn("c5", card)
+        self.assertIn("c6", card)
+        self.assertEqual(card["c6"]["pts"], 5.0)
+        self.assertIn("total", card)
+        self.assertIn("tier", card)
+
+    def test_rescore_execution(self):
+        """Verifica que el re-score del catálogo funciona en seco y con persistencia (T066, T067)."""
+        from gravel_bot.evaluator import run_catalog_rescore
+
+        res_dry = run_catalog_rescore(dry_run=True)
+        self.assertTrue(res_dry["dry_run"])
+        self.assertGreater(res_dry["total_bikes"], 0)
+        self.assertIn("tier_counts", res_dry)
+
+    def test_bike_inspector_detailed_card(self):
+        """Verifica que la ficha técnica contiene desglose C1..C6 e insignias (T068)."""
+        from gravel_bot.bike_inspector import format_detailed_bike_card
+
+        msg = format_detailed_bike_card("Jakar 30")
+        self.assertIn("VALORACIÓN Y RÚBRICA CALIBRADA C1..C6", msg)
+        self.assertIn("C1 Frenos", msg)
+        self.assertIn("C6 Garantía & Canal", msg)
+
+    def test_web_server_card_and_stats(self):
+        """Verifica los endpoints de auditoría y ficha desglosada en la API REST (T069, T070)."""
+        from gravel_bot.web_server import get_catalog_stats_dict, get_sanitized_catalog_dict
+
+        stats = get_catalog_stats_dict()
+        self.assertEqual(stats["status"], "success")
+        self.assertIn("audit_summary", stats)
+
+        bikes = get_sanitized_catalog_dict()
+        self.assertGreater(len(bikes), 0)
+        sample = bikes[0]
+        self.assertIn("audit_status", sample)
+        self.assertIn("c1_frenos", sample)
+        self.assertIn("c6_garantia", sample)
 if __name__ == "__main__":
     unittest.main()

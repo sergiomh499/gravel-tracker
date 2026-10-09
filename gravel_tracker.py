@@ -218,6 +218,73 @@ if __name__ == "__main__":
         elif cmd in ["--validate", "validate"]:
             from gravel_bot.validator import run_full_catalog_validation
             run_full_catalog_validation(auto_repair=True, verbose=True)
+        elif cmd in ["--audit", "audit"]:
+            from gravel_bot.catalog_auditor import run_catalog_audit
+            limit_val = 20
+            store_filter_val = None
+            force_val = False
+            args = sys.argv[2:]
+            idx = 0
+            while idx < len(args):
+                a = args[idx]
+                if a in ["--limit", "-l"] and idx + 1 < len(args):
+                    limit_val = int(args[idx + 1])
+                    idx += 2
+                elif a in ["--all"]:
+                    limit_val = None
+                    idx += 1
+                elif a in ["--tienda", "-t", "--store"] and idx + 1 < len(args):
+                    store_filter_val = args[idx + 1]
+                    idx += 2
+                elif a in ["--force", "-f"]:
+                    force_val = True
+                    idx += 1
+                elif a.isdigit():
+                    limit_val = int(a)
+                    idx += 1
+                else:
+                    idx += 1
+
+            print("\n" + "="*80)
+            print("🔍 INICIANDO AUDITORÍA VIVA DEL CATÁLOGO (Stock & Enlaces)")
+            print("="*80)
+            if store_filter_val:
+                print(f"Tienda filtrada: {store_filter_val}")
+            if limit_val:
+                print(f"Límite de comprobaciones: {limit_val}")
+            print(f"Modo forzado (ignorar 24h previas): {'Sí' if force_val else 'No'}\n")
+
+            def on_progress(cur, tot, res):
+                tag = "✅" if res.audit_status == "verificado" else ("⚠️" if res.audit_status == "sin_stock" else "❌")
+                price_str = f"{res.live_price:.0f}€" if res.live_price else "-"
+                print(f"[{cur}/{tot}] {tag} ID {res.bike_id:<3} | {res.audit_status:<12} | {price_str:<6} | {res.url[:45]}")
+
+            report = run_catalog_audit(limit=limit_val, store_filter=store_filter_val, force=force_val, progress_callback=on_progress)
+            print("\n" + "="*80)
+            print("📊 RESUMEN DE AUDITORÍA DEL CATÁLOGO")
+            print("="*80)
+            print(f"Total analizados:       {report['auditados']}")
+            print(f"Activos y en stock:     {report['verificados_ok']}")
+            print(f"Agotados / Sin stock:   {report['sin_stock']}")
+            print(f"Enlaces caídos:         {report['enlaces_caidos']}")
+            print(f"Precios actualizados:   {report['precios_actualizados']}")
+            print(f"Pendientes anti-bot:    {report['pendientes_antiban']}")
+            print(f"Tiempo total:           {report['duracion_segundos']} s")
+            print("="*80 + "\n")
+        elif cmd in ["--re-score", "re-score", "--rescore", "rescore"]:
+            from gravel_bot.evaluator import run_catalog_rescore
+            dry_run = "--dry-run" in sys.argv
+            print("\n" + "="*80)
+            print(f"⚖️ RECALCULANDO RÚBRICA CALIBRADA C1..C6 {'(MODO DRY-RUN)' if dry_run else ''}")
+            print("="*80)
+            res = run_catalog_rescore(dry_run=dry_run)
+            print(f"Total bicicletas procesadas: {res['total_bikes']}")
+            print("\nDistribución de Tiers:")
+            for tier_name, count in sorted(res['tier_counts'].items()):
+                print(f" * {tier_name:<10}: {count} modelos")
+            if not dry_run:
+                print("\n✅ Base de datos actualizada con puntuaciones calibradas C1..C6 y factor garantía.")
+            print("="*80 + "\n")
         elif cmd in ["--purge", "purge"]:
             from gravel_bot.db import purge_obsolete_and_junior_models
             res = purge_obsolete_and_junior_models()
