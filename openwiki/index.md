@@ -5,7 +5,7 @@ description: Mapa de páginas de la base de conocimiento del sistema Gravel Bot.
 tags: [index, documentacion]
 ---
 
-# Documentación — Gravel Bot (valoracion_bicicleta)
+# Documentación — Gravel Tracker (gravel-tracker)
 
 Sistema de rastreo automático de ofertas de bicicletas gravel en España, con evaluación ponderada y notificaciones Telegram.
 
@@ -19,7 +19,7 @@ Sistema de rastreo automático de ofertas de bicicletas gravel en España, con e
 ## Estructura del Proyecto
 
 ```
-valoracion_bicicleta/
+gravel-tracker/
 ├── gravel_tracker.py          # CLI unificada — punto de entrada
 ├── gravel_madrid.db           # Base de datos SQLite
 ├── catalog_snapshot.json      # Snapshot del catálogo en JSON

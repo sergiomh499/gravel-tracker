@@ -38,8 +38,8 @@ if env_path.exists():
                     os.environ[k] = v
 
 # Configuración de Alertas y Telegram
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() or "8987812105:AAGEPtpXKz8kcai8TkcOILFRyIhpNqOTdJQ"
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip() or "4983947"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
 # Umbrales mínimos para disparar Notificación en Telegram
 ALERT_CRITERIA = {
