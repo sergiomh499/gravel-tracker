@@ -21,6 +21,18 @@ python3 gravel_tracker.py --presupuesto 1000 --local
 python3 gravel_tracker.py --presupuesto 1000 --json
 ```
 
+### Uso desde Dashboard Web Interactivo (SPA Local):
+```bash
+# Iniciar el servidor web interactivo (abre en http://localhost:8080)
+python3 gravel_tracker.py --web
+
+# Especificar puerto personalizado
+python3 gravel_tracker.py --web --port 8090
+```
+- Slider de presupuesto en tiempo real a 60fps con cálculo dinámico de podio.
+- Filtros rápidos por talla, transmisión (1x/2x), frenos hidráulicos y tiendas locales de Madrid.
+- Duelo comparativo (1v1) con matriz de especificaciones y ventajas ganadoras resaltadas.
+
 ### Uso en Telegram Bot:
 - `/presupuesto 1000` — Genera el podio con tarjeta ejecutiva y enlaces directos de compra.
 - `/presupuesto` — Muestra el menú interactivo con botones de presupuestos habituales.

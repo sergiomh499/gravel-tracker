@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravel Tracker — Radar de Chollos & Optimizador de Presupuesto</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation & Global Header -->
+  <header class="app-header">
+    <div class="container header-container">
+      <div class="brand">
+        <span class="brand-icon">🚲</span>
+        <div>
+          <h1>Gravel Tracker</h1>
+          <p class="tagline">Radar de Mercado, Chollos Reales & Optimizador de Presupuesto</p>
+        </div>
+      </div>
+      <div class="header-stats" id="header-stats">
+        <span class="stat-badge">Cargando catálogo...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+
+    <!-- Executive Podium Banner -->
+    <section class="podium-section" id="podium-section">
+      <div class="section-title-wrap">
+        <h2>🎯 Podio Ejecutivo de tu Presupuesto</h2>
+        <span class="section-subtitle" id="podium-subtitle">Ajusta el presupuesto abajo para actualizar tus mejores compras</span>
+      </div>
+      <div class="podium-grid" id="podium-grid">
+        <div class="loading-placeholder">Calculando las mejores opciones del mercado...</div>
+      </div>
+    </section>
+
+    <!-- Interactive Filters & Controls Bar -->
+    <section class="controls-section">
+      <div class="controls-card">
+        
+        <!-- Budget Slider & Quick Presets -->
+        <div class="control-group budget-group">
+          <div class="budget-header">
+            <label for="budget-slider">Presupuesto Máximo:</label>
+            <span class="budget-display"><span id="budget-val">1000</span> €</span>
+          </div>
+          <input type="range" id="budget-slider" min="400" max="3000" step="50" value="1000">
+          <div class="preset-buttons">
+            <button class="preset-btn" data-budget="800">&lt; 800 €</button>
+            <button class="preset-btn active" data-budget="1000">1.000 €</button>
+            <button class="preset-btn" data-budget="1200">1.200 €</button>
+            <button class="preset-btn" data-budget="1500">1.500 €</button>
+            <button class="preset-btn" data-budget="2000">2.000 €</button>
+            <button class="preset-btn" data-budget="3500">Sin tope</button>
+          </div>
+        </div>
+
+        <!-- Filter Pills Grid -->
+        <div class="filters-grid">
+          
+          <!-- Sizing -->
+          <div class="filter-col">
+            <label>Talla recomendada:</label>
+            <div class="pill-group" id="filter-size">
+              <button class="pill-btn active" data-val="all">Todas</button>
+              <button class="pill-btn" data-val="XS">XS</button>
+              <button class="pill-btn" data-val="S">S (1.69 m)</button>
+              <button class="pill-btn" data-val="M">M</button>
+              <button class="pill-btn" data-val="L">L</button>
+            </div>
+          </div>
+
+          <!-- Drivetrain -->
+          <div class="filter-col">
+            <label>Transmisión:</label>
+            <div class="pill-group" id="filter-drivetrain">
+              <button class="pill-btn active" data-val="all">Todas</button>
+              <button class="pill-btn" data-val="2x">2x Biplato</button>
+              <button class="pill-btn" data-val="1x">1x Monoplato</button>
+            </div>
+          </div>
+
+          <!-- Brakes -->
+          <div class="filter-col">
+            <label>Frenos:</label>
+            <div class="pill-group" id="filter-brakes">
+              <button class="pill-btn active" data-val="all">Todos</button>
+              <button class="pill-btn" data-val="hidraulico">Hidráulicos</button>
+              <button class="pill-btn" data-val="mecanico">Mecánicos</button>
+            </div>
+          </div>
+
+          <!-- Channel & Local -->
+          <div class="filter-col">
+            <label>Canal de Compra:</label>
+            <div class="pill-group" id="filter-channel">
+              <button class="pill-btn active" data-val="all">Todos</button>
+              <button class="pill-btn" data-val="tienda_fisica">📍 Físicas Madrid</button>
+              <button class="pill-btn" data-val="ocasion_certificada">♻️ Certificadas</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Search & Compare Bar -->
+        <div class="search-compare-bar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Buscar por marca o modelo (ej. Jakar, Kalima, Terra)...">
+          </div>
+          <div class="compare-action-wrap">
+            <button id="compare-btn" class="compare-btn" disabled>
+              ⚔️ Duelo 1v1 (<span id="compare-count">0</span>/2)
+            </button>
+            <button id="clear-compare-btn" class="clear-compare-btn" title="Limpiar selección" style="display:none;">✕</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Catalog Bike Grid -->
+    <section class="catalog-section">
+      <div class="catalog-header">
+        <h3 id="catalog-count-text">Bicicletas Disponibles</h3>
+        <div class="sort-wrap">
+          <label for="sort-select">Ordenar por:</label>
+          <select id="sort-select">
+            <option value="vfm">Mayor Eficiencia (VfM)</option>
+            <option value="score">Mayor Nota / Calidad</option>
+            <option value="price_asc">Menor Precio</option>
+            <option value="discount">Mayor Descuento %</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bike-grid" id="bike-grid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 1v1 Comparison Modal -->
+  <div class="modal-backdrop" id="compare-modal" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚔️ Duelo Técnico Comparativo (1v1)</h3>
+        <button class="modal-close-btn" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body" id="compare-modal-body">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p>Gravel Tracker &copy; 2026. Datos sincronizados en tiempo real desde <code>gravel_madrid.db</code>.</p>
+      <p class="footer-tip">Cero cuadros sueltos, cero ebikes, solo gravel real al mejor precio disponible.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

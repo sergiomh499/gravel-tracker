@@ -20,8 +20,8 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 **Purpose**: Module structure initialization and static assets directory setup.
 
-- [ ] T026 Initialize web server module structure in `gravel_bot/web_server.py`
-- [ ] T027 [P] Create static web assets directory structure in `gravel_bot/web/index.html`
+- [X] T026 Initialize web server module structure in `gravel_bot/web_server.py`
+- [X] T027 [P] Create static web assets directory structure in `gravel_bot/web/index.html`
 
 ---
 
@@ -31,9 +31,9 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 **⚠️ CRITICAL**: Must be completed before user story implementation begins.
 
-- [ ] T028 Implement `ThreadingHTTPServer` and base handler skeleton in `gravel_bot/web_server.py`
-- [ ] T029 [P] Implement REST endpoint routing (`/api/bikes`, `/api/recommend`, `/api/stats`) in `gravel_bot/web_server.py`
-- [ ] T030 [P] Setup unit test harness for HTTP server and API endpoints in `test_new_features.py`
+- [X] T028 Implement `ThreadingHTTPServer` and base handler skeleton in `gravel_bot/web_server.py`
+- [X] T029 [P] Implement REST endpoint routing (`/api/bikes`, `/api/recommend`, `/api/stats`) in `gravel_bot/web_server.py`
+- [X] T030 [P] Setup unit test harness for HTTP server and API endpoints in `test_new_features.py`
 
 **Checkpoint**: Foundation ready — user story implementation can proceed.
 
@@ -47,15 +47,15 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 ### Tests for User Story 1
 
-- [ ] T031 [P] [US1] Write unit tests for `/api/bikes` and `/api/recommend` JSON endpoints in `test_new_features.py`
+- [X] T031 [P] [US1] Write unit tests for `/api/bikes` and `/api/recommend` JSON endpoints in `test_new_features.py`
 
 ### Implementation for User Story 1
 
-- [ ] T032 [US1] Implement JSON serialization for sanitized gravel catalog in `gravel_bot/web_server.py`
-- [ ] T033 [US1] Build responsive HTML layout and design system in `gravel_bot/web/index.html`
-- [ ] T034 [US1] Implement client-side reactive budget slider and live card grid rendering in `gravel_bot/web/app.js`
-- [ ] T035 [US1] Implement modern responsive CSS styling and badge styles in `gravel_bot/web/style.css`
-- [ ] T036 [US1] Implement CLI `--web` flag and server launcher in `gravel_tracker.py`
+- [X] T032 [US1] Implement JSON serialization for sanitized gravel catalog in `gravel_bot/web_server.py`
+- [X] T033 [US1] Build responsive HTML layout and design system in `gravel_bot/web/index.html`
+- [X] T034 [US1] Implement client-side reactive budget slider and live card grid rendering in `gravel_bot/web/app.js`
+- [X] T035 [US1] Implement modern responsive CSS styling and badge styles in `gravel_bot/web/style.css`
+- [X] T036 [US1] Implement CLI `--web` flag and server launcher in `gravel_tracker.py`
 
 **Checkpoint**: User Story 1 functional and independently testable as an MVP.
 
@@ -69,14 +69,13 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 ### Tests for User Story 2
 
-- [ ] T037 [P] [US2] Write unit tests for comparison advantage calculation in `test_new_features.py`
+- [X] T037 [P] [US2] Write unit tests for comparison advantage calculation in `test_new_features.py`
 
 ### Implementation for User Story 2
 
-- [ ] T038 [US2] Implement side-by-side spec differential calculation in `gravel_bot/web_server.py`
-- [ ] T039 [US2] Implement comparison modal UI and winner spec highlights in `gravel_bot/web/app.js`
-- [ ] T040 [US2] Add modal animation and comparative table styling in `gravel_bot/web/style.css`
-
+- [X] T038 [US2] Implement side-by-side spec differential calculation in `gravel_bot/web_server.py`
+- [X] T039 [US2] Implement comparison modal UI and winner spec highlights in `gravel_bot/web/app.js`
+- [X] T040 [US2] Add modal animation and comparative table styling in `gravel_bot/web/style.css`
 **Checkpoint**: User Stories 1 and 2 operate in tandem with interactive comparison capabilities.
 
 ---
@@ -89,9 +88,9 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 ### Implementation for User Story 3
 
-- [ ] T041 [P] [US3] Implement physical store filtering toggle and distance badge logic in `gravel_bot/web/app.js`
-- [ ] T042 [US3] Add channel filter UI controls in `gravel_bot/web/index.html`
-- [ ] T043 [US3] Style store badges and local pickup indicators in `gravel_bot/web/style.css`
+- [X] T041 [P] [US3] Implement physical store filtering toggle and distance badge logic in `gravel_bot/web/app.js`
+- [X] T042 [US3] Add channel filter UI controls in `gravel_bot/web/index.html`
+- [X] T043 [US3] Style store badges and local pickup indicators in `gravel_bot/web/style.css`
 
 **Checkpoint**: All user stories functional across catalog exploration, 1v1 face-off, and local channels.
 
@@ -101,10 +100,10 @@ description: "Task list for Lightweight Interactive Web Dashboard implementation
 
 **Purpose**: CLI wiring, documentation, quickstart validation, and mobile polish.
 
-- [ ] T044 [P] Wire CLI subcommand `web` in `gravel_bot/cli.py`
-- [ ] T045 [P] Add quickstart integration smoke test in `test_new_features.py`
-- [ ] T046 [P] Update user documentation with web launcher instructions in `directorio_bicicletas.md`
-- [ ] T047 Validate mobile viewport responsiveness and browser asset caching in `gravel_bot/web/index.html`
+- [X] T044 [P] Wire CLI subcommand `web` in `gravel_bot/cli.py`
+- [X] T045 [P] Add quickstart integration smoke test in `test_new_features.py`
+- [X] T046 [P] Update user documentation with web launcher instructions in `directorio_bicicletas.md`
+- [X] T047 Validate mobile viewport responsiveness and browser asset caching in `gravel_bot/web/index.html`
 
 ---
 

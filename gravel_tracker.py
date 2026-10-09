@@ -134,6 +134,17 @@ if __name__ == "__main__":
                 include_stretch=True
             )
             print(format_budget_recommendation_card(podio, format="json" if json_mode else "text"))
+        elif cmd in ["--web", "web", "--dashboard", "dashboard", "--ui", "ui"]:
+            from gravel_bot.web_server import run_web_server
+            port_val = 8080
+            for idx, a in enumerate(sys.argv[2:], start=2):
+                if a in ["--port", "-p"] and idx + 1 < len(sys.argv):
+                    port_val = int(sys.argv[idx + 1])
+                    break
+                elif a.isdigit():
+                    port_val = int(a)
+                    break
+            run_web_server(port=port_val)
         elif cmd in ["--pure-deals", "pure-deals", "--chollos", "--chollos-talla", "--chollos-zona"]:
             from gravel_bot.deal_detector import format_pure_deals_message
             from gravel_bot.config import RIDER_PROFILE

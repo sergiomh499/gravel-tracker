@@ -75,6 +75,13 @@ def cmd_budget(args):
     )
     print(format_budget_recommendation_card(podio, format="json" if json_mode else "text"))
 
+def cmd_web(args):
+    init_db()
+    from gravel_bot.web_server import run_web_server
+    port = getattr(args, "port", 8080) or 8080
+    host = getattr(args, "host", "127.0.0.1") or "127.0.0.1"
+    run_web_server(port=port, host=host)
+
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
     deep_scan = getattr(args, "deep", False)
@@ -132,6 +139,11 @@ def main():
     parser_budget.add_argument("--no-stretch", action="store_true", help="No calcular alternativa Smart Stretch")
     parser_budget.add_argument("--json", action="store_true", help="Salida en formato JSON estructurado")
 
+    # web / dashboard
+    parser_web = subparsers.add_parser("web", aliases=["dashboard", "ui"], help="Iniciar el servidor web interactivo local")
+    parser_web.add_argument("--port", "-p", type=int, default=8080, help="Puerto del servidor (default 8080)")
+    parser_web.add_argument("--host", type=str, default="127.0.0.1", help="Host del servidor (default 127.0.0.1)")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -146,6 +158,8 @@ def main():
         cmd_daemon(args)
     elif args.command in ["presupuesto", "budget", "recomendar"]:
         cmd_budget(args)
+    elif args.command in ["web", "dashboard", "ui"]:
+        cmd_web(args)
     else:
         # Default: mostrar listado
         cmd_list(args)

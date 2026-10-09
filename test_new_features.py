@@ -505,5 +505,96 @@ class TestBudgetOptimizer(unittest.TestCase):
         self.assertEqual(parsed["status"], "success")
         self.assertIn("best_value", parsed)
         self.assertIn("top_bargain", parsed)
+
+class TestWebServerAndDashboard(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        import threading
+        from gravel_bot.web_server import create_web_server
+        cls.server, cls.port = create_web_server(port=9099, host="127.0.0.1")
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base_url = f"http://127.0.0.1:{cls.port}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def test_static_assets(self):
+        """Verifica que el servidor sirve HTML, JS y CSS con MIME types correctos (T028, T033)."""
+        import urllib.request
+        req = urllib.request.urlopen(f"{self.base_url}/")
+        self.assertEqual(req.status, 200)
+        self.assertIn("text/html", req.headers.get("Content-Type", ""))
+        body = req.read().decode("utf-8")
+        self.assertIn("Gravel Tracker", body)
+        self.assertIn("Podio Ejecutivo", body)
+
+        req_js = urllib.request.urlopen(f"{self.base_url}/app.js")
+        self.assertEqual(req_js.status, 200)
+
+        req_css = urllib.request.urlopen(f"{self.base_url}/style.css")
+        self.assertEqual(req_css.status, 200)
+        self.assertIn("text/css", req_css.headers.get("Content-Type", ""))
+
+    def test_api_bikes_endpoint(self):
+        """Verifica el endpoint /api/bikes (T031, T032)."""
+        import urllib.request, json
+        req = urllib.request.urlopen(f"{self.base_url}/api/bikes")
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode("utf-8"))
+        self.assertEqual(data["status"], "success")
+        self.assertGreater(data["count"], 0)
+        self.assertIsInstance(data["bikes"], list)
+        for b in data["bikes"][:5]:
+            self.assertIn("brand", b)
+            self.assertIn("price", b)
+            self.assertNotIn("cuadro", b["model"].lower())
+
+    def test_api_recommend_endpoint(self):
+        """Verifica el endpoint /api/recommend con parámetros de presupuesto (T031)."""
+        import urllib.request, json
+        req = urllib.request.urlopen(f"{self.base_url}/api/recommend?budget=1000&height=169")
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode("utf-8"))
+        self.assertIn(data["status"], ["success", "no_exact_match"])
+        self.assertEqual(data["budget"], 1000.0)
+        if data["best_value"]:
+            self.assertLessEqual(data["best_value"]["price"], 1000.0)
+
+    def test_api_stats_and_compare_endpoints(self):
+        """Verifica los endpoints /api/stats y /api/compare (T037, T038)."""
+        import urllib.request, json
+        # Stats
+        req_st = urllib.request.urlopen(f"{self.base_url}/api/stats")
+        self.assertEqual(req_st.status, 200)
+        st = json.loads(req_st.read().decode("utf-8"))
+        self.assertEqual(st["status"], "success")
+        self.assertGreater(st["total_active_gravel"], 0)
+
+        # Compare
+        req_b = urllib.request.urlopen(f"{self.base_url}/api/bikes")
+        bikes = json.loads(req_b.read().decode("utf-8"))["bikes"]
+        if len(bikes) >= 2:
+            b1_id, b2_id = bikes[0]["id"], bikes[1]["id"]
+            req_cmp = urllib.request.urlopen(f"{self.base_url}/api/compare?b1={b1_id}&b2={b2_id}")
+            self.assertEqual(req_cmp.status, 200)
+            cmp_data = json.loads(req_cmp.read().decode("utf-8"))
+            self.assertEqual(cmp_data["status"], "success")
+            self.assertIn("advantages_a", cmp_data["comparison"])
+            self.assertIn("advantages_b", cmp_data["comparison"])
+
+    def test_web_quickstart_smoke(self):
+        """Smoke test de integración según quickstart.md (T045)."""
+        import urllib.request, json
+        # Healthcheck
+        req = urllib.request.urlopen(f"{self.base_url}/api/stats")
+        self.assertEqual(req.status, 200)
+        # Recommendation query
+        req_rec = urllib.request.urlopen(f"{self.base_url}/api/recommend?budget=1200")
+        rec = json.loads(req_rec.read().decode("utf-8"))
+        self.assertIn("status", rec)
 if __name__ == "__main__":
     unittest.main()
