@@ -9,3 +9,6 @@ __pycache__/
 
 # Base de datos temporal si se prefiere excluir (en este caso la incluimos en el repo)
 # gravel_madrid.db
+
+# Local agent artifacts
+.omp/
