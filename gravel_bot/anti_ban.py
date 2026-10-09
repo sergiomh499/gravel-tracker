@@ -4,6 +4,7 @@ Implementa perfiles de navegación coherentes, rate limiting adaptativo con jitt
 gestión persistente de cookies de sesión, backoff exponencial y detección de retos/CAPTCHAs.
 """
 
+import os
 import time
 import random
 import re
@@ -11,7 +12,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import http.cookiejar
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 # Perfiles de navegador coherentes (User-Agent + Client Hints alineados)
 BROWSER_PROFILES = [
@@ -105,14 +106,28 @@ class ResilientSession:
     _cookie_jar = http.cookiejar.CookieJar()
     _opener = None
     _cooldown_domains: Dict[str, float] = {}
+    _proxies: List[str] = []
 
     @classmethod
-    def get_opener(cls):
+    def get_configured_proxies(cls) -> List[str]:
+        if not cls._proxies:
+            raw = os.environ.get("GRAVEL_PROXIES") or os.environ.get("GRAVEL_PROXY", "")
+            if raw:
+                cls._proxies = [p.strip() for p in raw.split(",") if p.strip()]
+        return cls._proxies
+
+    @classmethod
+    def get_opener(cls, proxy: Optional[str] = None):
+        # ponytail: ProxyHandler estándar de urllib; rotación sobre GRAVEL_PROXIES / GRAVEL_PROXY
+        proxies = cls.get_configured_proxies()
+        active_proxy = proxy or (random.choice(proxies) if proxies else None)
+        cookie_handler = urllib.request.HTTPCookieProcessor(cls._cookie_jar)
+        if active_proxy:
+            proxy_handler = urllib.request.ProxyHandler({"http": active_proxy, "https": active_proxy})
+            return urllib.request.build_opener(cookie_handler, proxy_handler)
         if cls._opener is None:
-            cookie_handler = urllib.request.HTTPCookieProcessor(cls._cookie_jar)
             cls._opener = urllib.request.build_opener(cookie_handler)
         return cls._opener
-
     @classmethod
     def is_in_cooldown(cls, domain: str) -> bool:
         """Comprueba si un dominio está en pausa preventiva por reto anti-bot detectado."""

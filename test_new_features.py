@@ -278,5 +278,35 @@ class TestNewFeatures(unittest.TestCase):
         prof2 = get_user_profile(chat_id)
         self.assertEqual(prof2["frecuencia_notificaciones"], "desactivada")
         self.assertEqual(prof2["alertas_activas"], 0)
+
+    def test_proxy_rotation_config(self):
+        """Verifica la configuración y carga de proxies en ResilientSession."""
+        import os
+        from gravel_bot.anti_ban import ResilientSession
+        os.environ["GRAVEL_PROXIES"] = "http://10.0.0.1:8080,http://10.0.0.2:8080"
+        ResilientSession._proxies = []
+        proxies = ResilientSession.get_configured_proxies()
+        self.assertEqual(len(proxies), 2)
+        self.assertIn("http://10.0.0.1:8080", proxies)
+        opener = ResilientSession.get_opener()
+        self.assertIsNotNone(opener)
+        del os.environ["GRAVEL_PROXIES"]
+        ResilientSession._proxies = []
+
+    def test_escapa_scraper_registration(self):
+        """Verifica que EscapaScraper esté registrado y disponible."""
+        from gravel_bot.scrapers import get_all_scrapers
+        from gravel_bot.scrapers.escapa import EscapaScraper
+        all_s = get_all_scrapers()
+        self.assertTrue(any(isinstance(s, EscapaScraper) for s in all_s))
+
+    def test_deep_scan_flag_and_scraper(self):
+        """Verifica la configuración de deep scan en WallapopMadridScraper y CLI."""
+        from gravel_bot.scrapers.wallapop import WallapopMadridScraper
+        scraper = WallapopMadridScraper()
+        self.assertTrue(hasattr(scraper, "deep_pages"))
+        self.assertEqual(scraper.max_pages, 2)
+        self.assertEqual(scraper.deep_pages, 5)
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,7 @@ from gravel_bot.scrapers.bicimarket import BicimarketScraper
 from gravel_bot.scrapers.bikediscount import BikeDiscountScraper
 from gravel_bot.scrapers.decathlon import DecathlonScraper
 from gravel_bot.scrapers.tuvalum import TuvalumScraper
+from gravel_bot.scrapers.escapa import EscapaScraper
 ACTIVE_SCRAPERS: List[BaseScraper] = [
     MammothScraper(),
     SanferbikeScraper(),
@@ -31,9 +32,7 @@ ACTIVE_SCRAPERS: List[BaseScraper] = [
     AlltricksScraper(),
     FabreguesScraper(),
     WallapopMadridScraper(),
-    OutletAggregatorScraper(),
     ChollometroScraper(),
-    MultiStoreAggregatorScraper(),
     BuycycleScraper(),
     CanyonOutletScraper(),
     BicispasajeScraper(),
@@ -41,6 +40,7 @@ ACTIVE_SCRAPERS: List[BaseScraper] = [
     BikeDiscountScraper(),
     DecathlonScraper(),
     TuvalumScraper(),
+    EscapaScraper(),
 ]
 
 def get_all_scrapers() -> List[BaseScraper]:

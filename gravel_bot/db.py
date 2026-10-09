@@ -81,6 +81,12 @@ def init_db():
         notas_veredicto TEXT
     );
     """)
+    # Migración en caliente: soporte para tallas_disponibles en catálogo
+    try:
+        c.execute("ALTER TABLE bicicletas ADD COLUMN tallas_disponibles TEXT")
+    except Exception:
+        pass
+
 
     # Tabla historial_precios
     c.execute("""
@@ -247,7 +253,7 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             marca = ?, modelo = ?, ano = ?, disciplina = ?,
             transmision = ?, tipo_transmision = ?, frenos = ?, tipo_frenos = ?,
             cuadro = ?, horquilla = ?, ejes = ?, patilla_udh = ?,
-            talla_recomendada_169 = ?, precio_pvp = ?, precio_oferta = ?,
+            talla_recomendada_169 = ?, tallas_disponibles = ?, precio_pvp = ?, precio_oferta = ?,
             tienda_id = ?, url_oferta = ?, en_stock = ?,
             c1_frenos = ?, c2_transmision = ?, c3_cuadro = ?, c4_precio = ?, c5_talla = ?,
             puntuacion_total = ?, nota = ?, tier = ?, notas_veredicto = ?
@@ -256,7 +262,8 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             b["marca"], b["modelo"], b.get("ano", 2025), b.get("disciplina", "gravel"),
             b["transmision"], b["tipo_transmision"], b["frenos"], b["tipo_frenos"],
             b["cuadro"], b["horquilla"], b.get("ejes", "Pasantes 12 mm"), b.get("patilla_udh", 0),
-            b["talla_recomendada_169"], b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
+            b["talla_recomendada_169"], b.get("tallas_disponibles", "Consultar tienda"),
+            b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
             b.get("tienda_id"), b.get("url_oferta", ""), b.get("en_stock", 1),
             b["c1_frenos"], b["c2_transmision"], b["c3_cuadro"], b["c4_precio"], b["c5_talla"],
             b["puntuacion_total"], b["nota"], b["tier"], b.get("notas_veredicto", ""),
@@ -268,18 +275,19 @@ def upsert_bike(b: Dict[str, Any]) -> int:
             slug, marca, modelo, ano, disciplina,
             transmision, tipo_transmision, frenos, tipo_frenos,
             cuadro, horquilla, ejes, patilla_udh,
-            talla_recomendada_169, precio_pvp, precio_oferta,
+            talla_recomendada_169, tallas_disponibles, precio_pvp, precio_oferta,
             tienda_id, url_oferta, en_stock,
             c1_frenos, c2_transmision, c3_cuadro, c4_precio, c5_talla,
             puntuacion_total, nota, tier, notas_veredicto
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         """, (
             b["slug"], b["marca"], b["modelo"], b.get("ano", 2025), b.get("disciplina", "gravel"),
             b["transmision"], b["tipo_transmision"], b["frenos"], b["tipo_frenos"],
             b["cuadro"], b["horquilla"], b.get("ejes", "Pasantes 12 mm"), b.get("patilla_udh", 0),
-            b["talla_recomendada_169"], b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
+            b["talla_recomendada_169"], b.get("tallas_disponibles", "Consultar tienda"),
+            b.get("precio_pvp", b["precio_oferta"]), b["precio_oferta"],
             b.get("tienda_id"), b.get("url_oferta", ""), b.get("en_stock", 1),
             b["c1_frenos"], b["c2_transmision"], b["c3_cuadro"], b["c4_precio"], b["c5_talla"],
             b["puntuacion_total"], b["nota"], b["tier"], b.get("notas_veredicto", "")

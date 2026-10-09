@@ -41,9 +41,11 @@ class BicispasajeScraper(BaseScraper):
             if pvp < price:
                 pvp = price
 
-            # Tallas
-            sizes = ["S", "M"]
-
+            # Tallas reales detectadas
+            size_matches = set(re.findall(r'talla-([a-z0-9]+)', a, re.I) + re.findall(r'class="[^"]*size[^"]*"[^>]*>([^<]+)<', a, re.I))
+            if not size_matches:
+                size_matches = set(re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', f"{name} {link}", re.I))
+            sizes = sorted([s.upper().strip() for s in size_matches if s.strip() and len(s.strip()) <= 4])
             results.append({
                 "title": name,
                 "price": price,

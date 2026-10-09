@@ -29,31 +29,43 @@ class BaseScraper:
 
     @staticmethod
     def clean_price(text: str) -> float:
-        """Convierte cadenas como '1.299,00 €' o '1349.1' a un float numérico limpio."""
+        """Convierte cadenas como '1.299,00 €', '1,299.00', '1.299' o '1349.1' a un float numérico limpio."""
         if not text:
             return 0.0
-        # Eliminar símbolos y espacios
-        cleaned = re.sub(r'[^\d,\.]', '', text).strip()
+        # Eliminar símbolos, espacios y letras
+        cleaned = re.sub(r'[^\d,\.]', '', str(text)).strip()
         if not cleaned:
             return 0.0
 
-        # Formato europeo: 1.299,00 -> 1299.00
+        # Si tiene tanto coma como punto, determinar cuál es el separador decimal
         if "," in cleaned and "." in cleaned:
-            cleaned = cleaned.replace(".", "").replace(",", ".")
+            if cleaned.rfind(",") > cleaned.rfind("."):
+                # Formato europeo: 1.299,00 -> 1299.00
+                cleaned = cleaned.replace(".", "").replace(",", ".")
+            else:
+                # Formato anglosajón / JSON: 1,299.00 -> 1299.00
+                cleaned = cleaned.replace(",", "")
         elif "," in cleaned:
-            # Caso 1299,00
-            cleaned = cleaned.replace(",", ".")
-        elif "." in cleaned:
-            # Caso 1.299 (sin decimales) vs 1299.50
-            parts = cleaned.split(".")
-            if len(parts) == 2 and len(parts[1]) == 3: # Miles: 1.299
+            # Caso europeo con coma única: 1299,00 o 1,299
+            parts = cleaned.split(",")
+            if len(parts) == 2 and len(parts[1]) == 3 and int(parts[0]) > 0:
+                # Miles: 1,299
                 cleaned = parts[0] + parts[1]
+            else:
+                cleaned = cleaned.replace(",", ".")
+        elif "." in cleaned:
+            # Caso con punto único: 1.299 (miles) vs 1299.50 (decimales)
+            parts = cleaned.split(".")
+            if len(parts) == 2 and len(parts[1]) == 3:
+                cleaned = parts[0] + parts[1]
+            elif len(parts) > 2:
+                # Varios puntos de miles: 1.299.000
+                cleaned = "".join(parts[:-1]) + ("." + parts[-1] if len(parts[-1]) <= 2 else parts[-1])
 
         try:
             return float(cleaned)
         except ValueError:
             return 0.0
-
     @staticmethod
     def clean_text(text: str) -> str:
         """Limpia etiquetas HTML y entidades."""

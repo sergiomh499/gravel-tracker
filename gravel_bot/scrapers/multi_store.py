@@ -37,7 +37,8 @@ class MultiStoreAggregatorScraper(BaseScraper):
         "fabregues_online",
         "mammoth_madrid",
         "wallapop_madrid",
-        "chollometro"
+        "chollometro",
+        "escapa_madrid"
     }
 
     def _parse_store_html(self, store: Dict[str, Any], html: str) -> List[Dict[str, Any]]:

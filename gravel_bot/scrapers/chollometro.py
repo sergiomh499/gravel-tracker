@@ -19,12 +19,7 @@ class ChollometroScraper(BaseScraper):
         self.base_url = "https://www.chollometro.com"
         self.search_queries = [
             "bicicleta+gravel",
-            "bici+gravel",
-            "megamo+jakar",
-            "conor+kalima",
-            "cube+nuroad",
-            "orbea+terra",
-            "kross+esker"
+            "gravel"
         ]
     def scrape(self) -> List[Dict[str, Any]]:
         """
@@ -59,9 +54,11 @@ class ChollometroScraper(BaseScraper):
                     if not title or price is None:
                         continue
 
-                    # Filtrar que realmente sea una bicicleta de gravel y no un accesorio
+                    # Filtrar que realmente sea una bicicleta de gravel y no un accesorio o producto promocionado
                     title_lower = title.lower()
-                    non_bike_keywords = ["casco", "zapatilla", "rueda", "cubierta", "manillar", "bolsa", "luz", "guante", "potencia", "sillin", "pedal"]
+                    if not any(k in title_lower for k in ["gravel", "jakar", "kalima", "esker", "terra", "nuroad", "silex", "speedster", "diverge"]):
+                        continue
+                    non_bike_keywords = ["casco", "zapatilla", "rueda", "cubierta", "manillar", "bolsa", "luz", "guante", "potencia", "sillin", "pedal", "tv", "oled"]
                     if any(nb in title_lower for nb in non_bike_keywords) and "bicicleta" not in title_lower and "bici" not in title_lower:
                         continue
 

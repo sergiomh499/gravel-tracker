@@ -85,7 +85,7 @@ def sync_directorio_markdown(db_path: str = DB_PATH, md_path: str = "directorio_
         print(f"⚠️ [AUTO-DOC] Error sincronizando {md_path}: {e}")
 
 
-def run_pipeline(send_alerts: bool = True, verbose: bool = True) -> Dict[str, Any]:
+def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool = False) -> Dict[str, Any]:
     """
     Ejecuta el pipeline completo de rastreo y actualización automática:
     1. Descarga ofertas de todas las tiendas configuradas (sin usar LLMs).
@@ -109,8 +109,10 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True) -> Dict[str, An
         if verbose:
             print(f"📡 [SCAN] Consultando {scraper.store_name} ({scraper.base_url})...")
         try:
-            items = scraper.scrape()
-            if verbose:
+            if deep_scan and hasattr(scraper, "deep_pages"):
+                items = scraper.scrape(deep=True)
+            else:
+                items = scraper.scrape()
                 print(f"   ↳ {len(items)} productos extraídos de {scraper.store_name}")
             total_scraped += len(items)
 
@@ -124,17 +126,22 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True) -> Dict[str, An
 
             for item in items:
                 # 1. Extracción y Rúbrica
+                item_sizes = item.get("sizes", [])
                 specs = detect_bike_specs(
                     title=item["title"],
+                    description=item.get("description", ""),
                     price=item["price"],
-                    sizes=item.get("sizes", [])
+                    sizes=item_sizes
                 )
+                if specs.get("disciplina") in ["no_bicicleta", "test_artifact"]:
+                    continue
                 specs["tienda_id"] = store_id
-                specs["tienda_nombre"] = scraper.store_name
                 specs["url_oferta"] = item["url"]
-                specs["precio_pvp"] = item.get("pvp", item["price"])
+                pvp_val = item.get("pvp")
+                specs["precio_pvp"] = pvp_val if (pvp_val and pvp_val > item["price"]) else specs.get("precio_pvp", item["price"])
                 specs["precio_oferta"] = item["price"]
-
+                if item_sizes:
+                    specs["tallas_disponibles"] = ", ".join([str(s) for s in item_sizes])
                 # 2. Persistencia en SQLite
                 bike_id = upsert_bike(specs)
                 saved_count += 1

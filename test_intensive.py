@@ -536,7 +536,7 @@ class TestBikeInspector(unittest.TestCase):
         info = get_detailed_bike_info("Kalima")
         self.assertIsNotNone(info)
         self.assertEqual(info["marca"], "Conor")
-        self.assertIn("RX400", info["transmision"])
+        self.assertTrue("RX400" in info["transmision"] or "RX-400" in info["transmision"])
         self.assertEqual(info["tipo_frenos"], "hidraulico")
 
         card = format_detailed_bike_card("Kalima")

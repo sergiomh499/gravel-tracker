@@ -4,8 +4,8 @@ Calcula de forma específica y no global la talla exacta, tolerancias y descarte
 para cualquier estatura, analizando la geometría real de cada fabricante.
 """
 
-from typing import Dict, Any, List, Tuple, Set
-
+import re
+from typing import Dict, Any, List, Tuple, Set, Union
 # Tabla maestra de tallajes específicos por fabricante y modelo
 BRAND_GEOMETRY_RULES: Dict[str, Dict[str, Any]] = {
     "canyon": {
@@ -223,7 +223,33 @@ def get_recommended_size_dynamic(marca: str, modelo: str, altura_cm: int = 169) 
         "comportamiento": rule.get("comportamiento", "estandar")
     }
 
-def evaluate_size_compatibility_dynamic(marca: str, modelo: str, altura_cm: int, sizes_encontradas: List[str]) -> Tuple[bool, str, str]:
+def extract_size_tokens(sizes_raw: Any) -> Set[str]:
+    """
+    Descompone strings o listas de tallas en tokens atómicos normalizados.
+    Ej: "S, M (52 cm)", ["Talla 54", "SM"] -> {"s", "m", "52", "54", "sm"}
+    """
+    if not sizes_raw:
+        return set()
+    if isinstance(sizes_raw, str):
+        sizes_list = [sizes_raw]
+    else:
+        sizes_list = list(sizes_raw)
+
+    tokens = set()
+    for s in sizes_list:
+        if not s:
+            continue
+        clean = str(s).lower()
+        parts = re.split(r'[,/|\s\(\)\-]+', clean)
+        for p in parts:
+            p = p.strip()
+            if p in ["talla", "tallas", "cm", "size", "sizes", "cuadro", "frame", "verde", "negro", "azul", "rojo", "blanco", "gris"]:
+                continue
+            if p:
+                tokens.add(p)
+    return tokens
+
+def evaluate_size_compatibility_dynamic(marca: str, modelo: str, altura_cm: int, sizes_encontradas: Any) -> Tuple[bool, str, str]:
     """
     Evalúa automáticamente si las tallas extraídas de un anuncio son compatibles
     con la fisionomía del usuario para ESA marca y ESE modelo concreto.
@@ -233,20 +259,17 @@ def evaluate_size_compatibility_dynamic(marca: str, modelo: str, altura_cm: int,
     talla_sugerida = rec["talla_recomendada"]
     razon = rec["razon"]
 
-    if not sizes_encontradas:
+    clean_found = extract_size_tokens(sizes_encontradas)
+    if not clean_found:
         # Si no hay lista explícita de tallas, se asume compatible pero con advertencia
         return True, talla_sugerida, f"Talla sugerida: {talla_sugerida}. ({razon})"
 
-    # Normalizar tokens encontrados
-    clean_found = {s.lower().strip() for s in sizes_encontradas}
-
-    # 1. Comprobar si contiene algún token explícitamente rechazado
-    # (ej. si el anuncio es SOLO talla M o 54 para Canyon/Orbea a 1,69m)
+    # 1. Comprobar si contiene algún token explícitamente admisible
     has_admissible = bool(clean_found.intersection(rec["tokens_admisibles"]))
     has_rejected_only = bool(clean_found.intersection(rec["tokens_rechazados"])) and not has_admissible
 
     if has_rejected_only:
-        return False, "No compatible", f"RECHAZADA: El anuncio solo ofrece talla incompatible ({', '.join(sizes_encontradas)}). {razon}"
+        return False, "No compatible", f"RECHAZADA: El anuncio solo ofrece talla incompatible ({', '.join(sorted(clean_found))}). {razon}"
 
     if has_admissible:
         return True, talla_sugerida, f"COMPATIBLE: Coincide con talla recomendada {talla_sugerida}. {razon}"

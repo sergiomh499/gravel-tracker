@@ -57,14 +57,16 @@ class BuycycleScraper(BaseScraper):
                     re.IGNORECASE | re.DOTALL
                 )
                 for href, title, price_str in cards:
-                    p = float(price_str.replace(".", "").replace(",", "."))
+                    p = self.clean_price(price_str)
                     if 450 <= p <= 1450:
                         full_title = title.strip()
+                        raw_sizes = re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', full_title, re.I)
+                        clean_sizes = [s.upper() for s in raw_sizes if len(s) <= 4]
                         results.append({
                             "title": full_title,
                             "price": p,
-                            "pvp": round(p * 1.35, 2),
-                            "sizes": ["S", "52"],
+                            "pvp": p,
+                            "sizes": clean_sizes,
                             "url": f"https://buycycle.com{href}" if href.startswith("/") else href,
                             "tienda_slug": self.store_slug
                         })

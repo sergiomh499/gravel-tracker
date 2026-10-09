@@ -37,7 +37,9 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
 
     # 2. Disciplina
     disciplina = "gravel"
-    if marca.lower() in ["testbrand", "test"] or title.lower().startswith("test "):
+    if any(w in full_text for w in [" tv ", "televisor", "samsung oled", "ruedas ", "juego de ruedas", "par de ruedas", "rodillo", "maillot", "culotte", "zapatillas"]):
+        disciplina = "no_bicicleta"
+    elif marca.lower() in ["testbrand", "test"] or title.lower().startswith("test "):
         disciplina = "test_artifact"
     elif "ebike" in full_text or "eléctrica" in full_text or "e-bike" in full_text:
         disciplina = "ebike_gravel"
@@ -47,7 +49,6 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         disciplina = "carretera"
     elif "mtb" in full_text or "mountain" in full_text:
         disciplina = "mtb"
-
     # 3. Transmisión y Biomecánica (Knowledge Base Dinámica)
     kb = KnowledgeBase.get_instance()
     matched_dt = kb.match_drivetrain(full_text)
@@ -72,16 +73,23 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     else:
         frenos_desc = "Frenos mecánicos por cable"
     # 5. Cuadro y Horquilla
+    model_spec = kb.find_known_model_spec(full_text)
     es_carbono = "carbon" in full_text or "carbono" in full_text
-    cuadro = "Carbono Toray High Modulus" if es_carbono else "Aluminio 6061 Hidroformado"
-    horquilla = "Carbono con paso de rueda amplio"
+    if model_spec and "cuadro" in model_spec and not es_carbono:
+        cuadro = model_spec["cuadro"]
+    else:
+        cuadro = "Carbono Toray High Modulus" if es_carbono else "Aluminio 6061 Hidroformado"
+
+    if model_spec and "horquilla" in model_spec:
+        horquilla = model_spec["horquilla"]
+    else:
+        horquilla = "Carbono con paso de rueda amplio"
 
     if "horquilla aluminio" in full_text or "fork alu" in full_text:
         horquilla = "Aluminio rígido"
 
     # 6. Patilla UDH
-    patilla_udh = 1 if ("udh" in full_text or "sram udh" in full_text or "universal derailleur" in full_text) else 0
-
+    patilla_udh = 1 if ("udh" in full_text or "sram udh" in full_text or "universal derailleur" in full_text) else (model_spec.get("udh", 0) if model_spec else 0)
     # 7. Compatibilidad Dinámica de Talla según Marca y Modelo (no global)
     if disciplina != "gravel":
         talla_valida = False
@@ -124,7 +132,8 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         "ejes": "Pasantes 12 mm",
         "patilla_udh": patilla_udh,
         "talla_recomendada_169": talla_sugerida if talla_valida else "No compatible",
-        "precio_pvp": price, # por defecto si no hay otro
+        "tallas_disponibles": ", ".join(sizes) if sizes else "Consultar tienda",
+        "precio_pvp": model_spec.get("pvp", price) if model_spec and (price == 0.0 or price >= model_spec.get("pvp", price) * 0.95) else price,
         "precio_oferta": price,
         "c1_frenos": c1,
         "c2_transmision": c2,

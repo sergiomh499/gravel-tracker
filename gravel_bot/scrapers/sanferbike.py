@@ -32,20 +32,28 @@ class SanferbikeScraper(BaseScraper):
             title = self.clean_text(raw_title)
 
             # 2. Precio oferta
-            price_m = re.search(r'class=\"product-price[^\"]*\"\s+content=\"([^\"]*)\"', w)
+            price_m = (
+                re.search(r'itemprop="price"\s+content="([^"]*)"', w) or
+                re.search(r'content="([^"]*)"\s+itemprop="price"', w) or
+                re.search(r'class="product-price[^"]*"\s+content="([^"]*)"', w) or
+                re.search(r'content="([^"]*)"\s+class="product-price[^"]*"', w) or
+                re.search(r'class="price[^"]*"[^>]*>([^<]+)</span>', w) or
+                re.search(r'(\d+[\.,]\d{2})\s*€', w)
+            )
             if not price_m:
                 continue
             price = self.clean_price(price_m.group(1))
 
             # 3. PVP original
-            old_m = re.search(r'class=\"regular-price[^\"]*\">([^<]+)</span>', w)
+            old_m = re.search(r'class="regular-price[^"]*">([^<]+)</span>', w)
             pvp = self.clean_price(old_m.group(1)) if old_m else price
             if pvp == 0.0 or pvp < price:
                 pvp = price
 
             # 4. Tallas disponibles
-            sizes = set(re.findall(r'talla-([a-z0-9]+)', w, re.IGNORECASE))
-
+            sizes = set(re.findall(r'talla-([a-z0-9]+)', w, re.IGNORECASE) + re.findall(r'class="[^"]*size[^"]*"[^>]*>([^<]+)<', w, re.IGNORECASE))
+            if not sizes:
+                sizes = set(re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', title + " " + link, re.IGNORECASE))
             # Filtrar si es bicicleta real
             if price > 400.0:
                 results.append({

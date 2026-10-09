@@ -29,7 +29,8 @@ class MammothScraper(BaseScraper):
             old_m = re.search(r'<span class=\"price is__old\">([^<]+)</span>', c)
             sizes_sec = re.search(r'<div Class=\"card--product-sizes[^\"]*\">(.*?)</div>', c, re.DOTALL | re.IGNORECASE)
             sizes = re.findall(r'<label>([^<]+)</label>', sizes_sec.group(1)) if sizes_sec else []
-
+            if not sizes:
+                sizes = re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', c, re.I)
             if link_m and name_m:
                 title = self.clean_text(name_m.group(1))
                 link = link_m.group(1)

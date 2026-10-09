@@ -127,7 +127,9 @@ def format_detailed_bike_card(identifier: Any) -> str:
     udh_str = "✅ Sí (Universal Derailleur Hanger)" if bike.get('patilla_udh') else "❌ Patilla propietaria"
     msg += f" • <b>Patilla UDH:</b> {udh_str}\n"
     msg += f" • <b>Talla Óptima (1,69 m):</b> <b>{bike.get('talla_recomendada_169', 'S')}</b>\n"
-
+    tallas_disp = bike.get('tallas_disponibles')
+    if tallas_disp and tallas_disp not in ["Consultar tienda", ""]:
+        msg += f" • <b>Tallas en Stock:</b> <code>{tallas_disp}</code>\n"
     # Sección 3: Valoración y Rúbrica
     msg += f"\n🏆 <b>VALORACIÓN Y RÚBRICA MADRID 50/50:</b>\n"
     msg += f" • <b>Clasificación:</b> <b>{bike.get('tier', 'Tier S')}</b>\n"
@@ -271,7 +273,19 @@ def get_available_bikes_list(
             query += " AND b.tipo_frenos = 'semihidraulico'"
 
     if size:
-        query += " AND b.talla_recomendada_169 != 'No compatible'"
+        from gravel_bot.geometry_sizing import extract_size_tokens
+        size_tokens = extract_size_tokens(size)
+        if size_tokens:
+            size_clauses = []
+            for tok in size_tokens:
+                size_clauses.append("LOWER(COALESCE(b.tallas_disponibles, '')) LIKE ?")
+                params.append(f"%{tok}%")
+                size_clauses.append("LOWER(b.talla_recomendada_169) LIKE ?")
+                params.append(f"%{tok}%")
+            query += f" AND ({' OR '.join(size_clauses)})"
+        else:
+            query += " AND (LOWER(COALESCE(b.tallas_disponibles, '')) LIKE ? OR LOWER(b.talla_recomendada_169) LIKE ?)"
+            params.extend([f"%{size.lower()}%", f"%{size.lower()}%"])
     if store_type:
         st_low = store_type.lower().strip()
         if any(w in st_low for w in ["ocasion", "cert", "reacond", "segunda"]):
@@ -348,9 +362,13 @@ def get_paged_available_bikes_payload(
         link_str = f"<a href='{url}'>{nombre}</a>" if url else nombre
         tienda = (b.get('tienda_nombre') or "Tienda")[:24]
         talla = b.get('talla_recomendada_169', 'S')
+        tallas_disp = b.get('tallas_disponibles')
+        talla_tag = f"<b>{talla}</b>"
+        if tallas_disp and tallas_disp not in ["Consultar tienda", "", talla]:
+            talla_tag += f" <i>(Stock: {tallas_disp})</i>"
 
         msg += f"<b>{i}.</b> [{b['tier']}] <b>{b['nota']}/10</b> | {link_str}\n"
-        msg += f"   💰 <b>{oferta} €</b>{ahorro_str} | 📏 Talla: <b>{talla}</b> | 📍 <i>{tienda}</i>\n"
+        msg += f"   💰 <b>{oferta} €</b>{ahorro_str} | 📏 Talla: {talla_tag} | 📍 <i>{tienda}</i>\n"
         msg += f"   ⚙️ {b['transmision']} | {b['frenos']}\n\n"
 
     # Construir teclado de paginación inline

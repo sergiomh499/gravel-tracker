@@ -57,8 +57,8 @@ def cmd_deals(args):
 
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
-    run_pipeline(send_alerts=send_alerts, verbose=True)
-
+    deep_scan = getattr(args, "deep", False)
+    run_pipeline(send_alerts=send_alerts, verbose=True, deep_scan=deep_scan)
 def cmd_test_telegram(args):
     print("📡 Probando conexión con Telegram Bot...")
     success = test_telegram_connection()
@@ -87,15 +87,14 @@ def main():
     # scan
     parser_scan = subparsers.add_parser("scan", help="Ejecutar rastreo en tiendas web y notificar gangas")
     parser_scan.add_argument("--no-alert", action="store_true", help="No enviar alertas a Telegram")
-
+    parser_scan.add_argument("--deep", action="store_true", help="Escaneo profundo con mayor paginación en portales compatibles (Wallapop, etc.)")
     # list
     parser_list = subparsers.add_parser("list", help="Listar ranking de bicicletas en la base de datos")
     parser_list.add_argument("tier", nargs="?", default=None, help="Filtrar por Tier (ej: 'Tier S+')")
 
     # deals
     parser_deals = subparsers.add_parser("deals", help="Mostrar mayores descuentos y oportunidades")
-    parser_deals.add_argument("--min-discount", type=float, default=15.0, help="Descuento mínimo en % (default 15)")
-
+    parser_deals.add_argument("--min-discount", type=float, default=15.0, help="Descuento mínimo en %% (default 15)")
     # test-telegram
     subparsers.add_parser("test-telegram", help="Comprobar credenciales de Telegram Bot")
 

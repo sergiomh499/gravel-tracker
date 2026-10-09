@@ -17,20 +17,30 @@ class CiclosCorredorScraper(BaseScraper):
     store_slug = "ciclos_corredor"
     store_name = "Ciclos Corredor Vallecas"
     store_type = "fisica"
-    category_urls = [
-        "https://cicloscorredor.com/es/c/bicicletas-gravel",
-        "https://cicloscorredor.com/es/c/bicicletas-gravel?page=2"
-    ]
+    base_category_url = "https://cicloscorredor.com/es/c/bicicletas-gravel"
 
     def scrape(self) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
         product_urls: List[str] = []
+        pages_to_crawl = [self.base_category_url]
+        crawled_pages = set()
 
         # 1. Recorrer páginas de categoría y obtener URLs de producto candidatas
-        for cat_url in self.category_urls:
+        while pages_to_crawl:
+            cat_url = pages_to_crawl.pop(0)
+            if cat_url in crawled_pages:
+                continue
+            crawled_pages.add(cat_url)
+
             page_html = self.fetch_html(cat_url)
             if not page_html:
                 continue
+
+            # Extraer enlaces a páginas siguientes con uid_pag dinámico
+            for p_link in re.findall(r'href=[\'"](/es/c/bicicletas-gravel\?uid_pag=[^\'"]+page=\d+[^\'"]*)[\'"]', page_html):
+                full_p = "https://cicloscorredor.com" + p_link
+                if full_p not in crawled_pages and full_p not in pages_to_crawl:
+                    pages_to_crawl.append(full_p)
 
             matches = re.finditer(
                 r'<h3[^>]*>\s*<a[^>]+href=[\'"](/es/p/[^\'"]+)[\'"][^>]*>\s*([^<]+)\s*</a>\s*</h3>(.*?)</div>\s*</div>',
@@ -52,8 +62,8 @@ class CiclosCorredorScraper(BaseScraper):
                 sale_str = sale_m.group(1) if sale_m else (p_m.group(1) if p_m else "0")
                 sale_price = self.clean_price(sale_str)
 
-                # Priorizar productos en rango accesible (400 - 1.650 €)
-                if 400.0 <= sale_price <= 1650.0:
+                # Priorizar productos en rango accesible (400 - 1.800 €)
+                if 400.0 <= sale_price <= 1800.0:
                     full_url = "https://cicloscorredor.com" + url_path
                     if full_url not in product_urls:
                         product_urls.append(full_url)

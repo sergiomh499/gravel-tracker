@@ -38,13 +38,21 @@ class OutletAggregatorScraper(BaseScraper):
 
                         p_val = self.clean_price(p_match.group(1))
                         if 400.0 <= p_val <= 4000.0:
+                            reg_m = re.search(r'class="regular-price[^"]*"[^>]*>([^<]+)</span>', c) or re.search(r'class="old-price[^"]*"[^>]*>([^<]+)</span>', c)
+                            pvp_val = self.clean_price(reg_m.group(1)) if reg_m else p_val
+                            if pvp_val < p_val:
+                                pvp_val = p_val
+                            raw_sizes = set(re.findall(r'talla-([a-z0-9]+)', c, re.I) + re.findall(r'class="[^"]*size[^"]*"[^>]*>([^<]+)<', c, re.I))
+                            if not raw_sizes:
+                                raw_sizes = set(re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', name + " " + link, re.I))
+                            clean_sizes = sorted([s.upper().strip() for s in raw_sizes if s.strip() and len(s.strip()) <= 4])
                             results.append({
                                 "title": name,
                                 "price": p_val,
-                                "pvp": round(p_val * 1.25, 2),
+                                "pvp": pvp_val,
                                 "url": link,
                                 "description": "Liquidación gravel en Biciescapa",
-                                "sizes": ["S", "M", "XS"],
+                                "sizes": clean_sizes,
                                 "tienda_slug": self.store_slug
                             })
         except Exception:
@@ -65,13 +73,21 @@ class OutletAggregatorScraper(BaseScraper):
                         p_val = self.clean_price(p_match.group(1))
                         link = l_match.group(1)
                         if 400.0 <= p_val <= 4000.0 and len(name) > 5:
+                            reg_m = re.search(r'class="regular-price[^"]*"[^>]*>([^<]+)</span>', a) or re.search(r'regular-price-dis[^>]*>([^<]+)</span>', a)
+                            pvp_val = self.clean_price(reg_m.group(1)) if reg_m else p_val
+                            if pvp_val < p_val:
+                                pvp_val = p_val
+                            raw_sizes = set(re.findall(r'class="bonattribute-btn[^"]*"[^>]*title="([^"]+)"', a) + re.findall(r'talla-([a-z0-9]+)', a, re.I))
+                            if not raw_sizes:
+                                raw_sizes = set(re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', name + " " + link, re.I))
+                            clean_sizes = sorted([s.upper().strip() for s in raw_sizes if s.strip() and len(s.strip()) <= 4])
                             results.append({
                                 "title": name,
                                 "price": p_val,
-                                "pvp": round(p_val * 1.25, 2),
+                                "pvp": pvp_val,
                                 "url": link,
                                 "description": "Liquidación gravel en Bikestocks",
-                                "sizes": ["S", "M", "XS"],
+                                "sizes": clean_sizes,
                                 "tienda_slug": self.store_slug
                             })
         except Exception:
