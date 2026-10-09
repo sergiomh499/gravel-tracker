@@ -1,6 +1,30 @@
 # Directorio y Fichas Técnicas de Bicicletas Gravel Evaluadas
 *Perfil de Evaluación:* 1ª Bici Gravel | 50% Asfalto / 50% Tierra | Madrid | Estatura: 1,69 m (Talla S/SM)
 
+
+## 🎯 Optimizador Ejecutivo de Presupuesto (CLI & Telegram)
+
+El sistema cuenta con un motor de decisión en tiempo real que filtra el 100% del ruido (cuadros sueltos, ebikes, tiendas cerradas como Tuvalum y tallas incompatibles) para encontrar la mejor bicicleta completa por el mejor precio real:
+
+### Uso desde Terminal (CLI):
+```bash
+# Recomendar la mejor compra para 1.000 € (altura 169 cm por defecto)
+python3 gravel_tracker.py --presupuesto 1000
+
+# Especificar altura personalizada o talla
+python3 gravel_tracker.py --presupuesto 1200 --altura 175 --talla M
+
+# Filtrar exclusivamente tiendas físicas locales (Madrid / retiro presencial)
+python3 gravel_tracker.py --presupuesto 1000 --local
+
+# Exportar en formato JSON estructurado
+python3 gravel_tracker.py --presupuesto 1000 --json
+```
+
+### Uso en Telegram Bot:
+- `/presupuesto 1000` — Genera el podio con tarjeta ejecutiva y enlaces directos de compra.
+- `/presupuesto` — Muestra el menú interactivo con botones de presupuestos habituales.
+- Lenguaje natural: Escribe directamente `1000`, `1200 €` o `tengo 950 €` en el chat.
 ---
 
 ## Índice Rápido de Modelos

@@ -12,6 +12,12 @@ from gravel_bot.bike_inspector import (
 from gravel_bot.deal_detector import check_and_notify_size_alerts
 from gravel_bot.bot_service import format_profile_message
 
+from gravel_bot.budget_optimizer import (
+    BudgetQuery, CleanCandidateBike, RecommendationPodio, calculate_vfm_index,
+    optimize_for_budget, format_budget_recommendation_card,
+    is_noise_candidate, is_size_compatible
+)
+from gravel_bot.db import get_candidate_bikes_for_budget
 class TestNewFeatures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -349,5 +355,155 @@ class TestNewFeatures(unittest.TestCase):
         export_catalog_snapshot(json_path=snap_file)
         self.assertTrue(os.path.exists(snap_file))
         os.remove(snap_file)
+
+class TestBudgetOptimizer(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_vfm_index_math(self):
+        """Verifica el cálculo del índice Value-for-Money (VfM)."""
+        self.assertEqual(calculate_vfm_index(90.0, 1000.0), 90.0)
+        self.assertEqual(calculate_vfm_index(80.0, 800.0), 100.0)
+        self.assertEqual(calculate_vfm_index(95.0, 1900.0), 50.0)
+        self.assertEqual(calculate_vfm_index(80.0, 0.0), 0.0)
+
+    def test_candidate_db_extraction(self):
+        """Verifica la extracción de candidatos con límite presupuestario en SQLite."""
+        candidates = get_candidate_bikes_for_budget(max_price=1100.0)
+        self.assertIsInstance(candidates, list)
+        self.assertGreater(len(candidates), 0)
+        for row in candidates:
+            self.assertLessEqual(row["precio_oferta"], 1100.0)
+            self.assertGreater(row["precio_oferta"], 0.0)
+            if row["tienda_nombre"]:
+                self.assertNotIn("CERRADA", row["tienda_nombre"])
+                self.assertNotIn("Liquidación", row["tienda_nombre"])
+
+    def test_budget_podio_optimization(self):
+        """Verifica la recomendación ejecutiva para un presupuesto dado (US1)."""
+        podio = optimize_for_budget(budget=1000.0, height_cm=169)
+        self.assertIsInstance(podio, RecommendationPodio)
+        self.assertEqual(podio.status, "success")
+        self.assertIsNotNone(podio.best_value)
+        self.assertLessEqual(podio.best_value.price, 1000.0)
+        self.assertGreater(podio.best_value.rubric_score, 0.0)
+
+        # Test formateador de texto y JSON
+        card_text = format_budget_recommendation_card(podio, format="text")
+        self.assertIn("PODIO DE RECOMENDACIÓN PARA TU PRESUPUESTO", card_text)
+        self.assertIn("1. MEJOR COMPRA ABSOLUTA", card_text)
+
+        card_json = format_budget_recommendation_card(podio, format="json")
+        import json
+        parsed = json.loads(card_json)
+        self.assertEqual(parsed["status"], "success")
+        self.assertEqual(parsed["budget"], 1000.0)
+
+    def test_noise_and_size_exclusion(self):
+        """Verifica la exclusión estricta de cuadros, ebikes, tiendas cerradas y tallas incompatibles (US2)."""
+        self.assertTrue(is_noise_candidate("Cuadro Gravel Kross Esker", "Kross", "gravel", "Wallapop"))
+        self.assertTrue(is_noise_candidate("Orbea Rise ebike M20", "Orbea", "ebike", "Mammoth"))
+        self.assertTrue(is_noise_candidate("Megamo Jakar 30", "Megamo", "gravel", "Tuvalum (CERRADA - Liquidación)"))
+        self.assertTrue(is_noise_candidate("Scott Road Speedster 10", "Scott", "carretera", "Sanferbike"))
+        self.assertFalse(is_noise_candidate("Megamo Jakar 30 2026", "Megamo", "gravel", "Biciescapa Madrid"))
+
+        # Sizing
+        compat_s, _ = is_size_compatible("S (52 cm)", "S, M, L", 169)
+        self.assertTrue(compat_s)
+        incompat_s, _ = is_size_compatible("No compatible", "M, L", 169)
+        self.assertFalse(incompat_s)
+
+        # Test podio sanitizado: 0 cuadros, 0 ebikes, 0 tiendas cerradas
+        podio = optimize_for_budget(budget=1500.0, height_cm=169)
+        for bike in [podio.best_value, podio.top_bargain, podio.smart_stretch, podio.budget_saver]:
+            if bike:
+                self.assertNotIn("cuadro", bike.model.lower())
+                self.assertNotIn("cuadro", bike.brand.lower())
+                self.assertNotIn("ebike", bike.model.lower())
+                self.assertNotIn("cerrada", bike.store_name.lower())
+                self.assertNotIn("tuvalum", bike.store_name.lower())
+                self.assertEqual(bike.discipline, "gravel")
+                self.assertNotEqual(bike.size_compatibility, "incompatible")
+
+    def test_smart_stretch_and_budget_saver(self):
+        """Verifica la detección de Smart Stretch y alternativas de ahorro (US3)."""
+        podio_900 = optimize_for_budget(budget=900.0, height_cm=169, include_stretch=True)
+        self.assertIsNotNone(podio_900.best_value)
+        self.assertLessEqual(podio_900.best_value.price, 900.0)
+
+        if podio_900.smart_stretch:
+            self.assertGreater(podio_900.smart_stretch.price, 900.0)
+            self.assertLessEqual(podio_900.smart_stretch.price, 900.0 * 1.15 + 50.0)
+            self.assertIsNotNone(podio_900.stretch_reason)
+
+        podio_1300 = optimize_for_budget(budget=1300.0, height_cm=169)
+        if podio_1300.budget_saver:
+            self.assertLessEqual(podio_1300.budget_saver.price, 1300.0 * 0.85)
+
+        msg = format_budget_recommendation_card(podio_1300, format="text")
+        if podio_1300.smart_stretch:
+            self.assertIn("SMART STRETCH", msg)
+        if podio_1300.budget_saver:
+            self.assertIn("OPCIÓN DE AHORRO INTELIGENTE", msg)
+
+    def test_telegram_budget_commands(self):
+        """Verifica la respuesta a /presupuesto y botones de preset en Telegram (US4)."""
+        from unittest.mock import patch
+        from gravel_bot.bot_service import _process_message
+
+        chat_id = 771122
+        with patch("gravel_bot.bot_service.send_reply") as mock_send:
+            # 1. Bare /presupuesto
+            _process_message({"chat": {"id": chat_id, "username": "budget_tester"}, "text": "/presupuesto"})
+            self.assertTrue(mock_send.called)
+            args, kwargs = mock_send.call_args
+            self.assertIn("OPTIMIZADOR DE PRESUPUESTO", args[1])
+            self.assertIn("inline_keyboard", kwargs.get("reply_markup", {}))
+
+            # 2. Comando explícito con valor /presupuesto 1200
+            _process_message({"chat": {"id": chat_id, "username": "budget_tester"}, "text": "/presupuesto 1200"})
+            args, kwargs = mock_send.call_args
+            self.assertIn("PODIO RECOMENDADO PARA TU PRESUPUESTO", args[1])
+            self.assertIn("1. MEJOR COMPRA EN PRESUPUESTO", args[1])
+
+            # 3. Mensaje numérico conversacional "1100€"
+            _process_message({"chat": {"id": chat_id, "username": "budget_tester"}, "text": "1100€"})
+            args, kwargs = mock_send.call_args
+            self.assertIn("PODIO RECOMENDADO PARA TU PRESUPUESTO", args[1])
+
+    def test_quickstart_end_to_end_smoke(self):
+        """Verificación Smoke End-to-End según quickstart.md (T023)."""
+        import json
+        # Escenario 1: Búsqueda estándar 1.000 €
+        p1 = optimize_for_budget(1000.0, height_cm=169)
+        self.assertEqual(p1.status, "success")
+        self.assertIsNotNone(p1.best_value)
+        self.assertLessEqual(p1.best_value.price, 1000.0)
+        self.assertTrue(p1.best_value.product_url.startswith("http"))
+
+        # Escenario 2: 0 cuadros, 0 ebikes, 0 tiendas cerradas
+        p2 = optimize_for_budget(1500.0, height_cm=169)
+        for b in [p2.best_value, p2.top_bargain, p2.smart_stretch, p2.budget_saver]:
+            if b:
+                self.assertNotIn("cuadro", b.model.lower())
+                self.assertNotIn("cuadro", b.brand.lower())
+                self.assertNotIn("ebike", b.model.lower())
+                self.assertNotIn("tuvalum", b.store_name.lower())
+                self.assertNotIn("cerrada", b.store_name.lower())
+
+        # Escenario 3: Smart stretch trigger
+        p3 = optimize_for_budget(950.0, height_cm=169, include_stretch=True)
+        self.assertLessEqual(p3.best_value.price, 950.0)
+        if p3.smart_stretch:
+            self.assertGreater(p3.smart_stretch.price, 950.0)
+            self.assertLessEqual(p3.smart_stretch.price, 950.0 * 1.15 + 50.0)
+
+        # Escenario 4: JSON Output
+        json_out = format_budget_recommendation_card(p1, format="json")
+        parsed = json.loads(json_out)
+        self.assertEqual(parsed["status"], "success")
+        self.assertIn("best_value", parsed)
+        self.assertIn("top_bargain", parsed)
 if __name__ == "__main__":
     unittest.main()

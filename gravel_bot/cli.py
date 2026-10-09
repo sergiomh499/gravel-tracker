@@ -55,6 +55,26 @@ def cmd_deals(args):
         print(f"{d['id']:<4} {nombre:<32} {d['tier']:<8} {int(d['precio_oferta']):<4} €   {int(d['precio_pvp']):<4} €   {desc_str:<10} {ahorro_str:<10} {t_nombre}")
     print("="*105 + "\n")
 
+def cmd_budget(args):
+    init_db()
+    from gravel_bot.budget_optimizer import optimize_for_budget, format_budget_recommendation_card
+    from gravel_bot.config import RIDER_PROFILE
+
+    budget_val = getattr(args, "presupuesto", 1000.0) or 1000.0
+    height_val = getattr(args, "altura", None) or RIDER_PROFILE.get("estatura_cm", 169)
+    size_val = getattr(args, "talla", None)
+    channel_val = "local_madrid" if getattr(args, "local", False) else (getattr(args, "canal", "all") or "all")
+    json_mode = getattr(args, "json", False)
+
+    podio = optimize_for_budget(
+        budget=budget_val,
+        height_cm=height_val,
+        size=size_val,
+        channel=channel_val,
+        include_stretch=not getattr(args, "no_stretch", False)
+    )
+    print(format_budget_recommendation_card(podio, format="json" if json_mode else "text"))
+
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
     deep_scan = getattr(args, "deep", False)
@@ -102,6 +122,16 @@ def main():
     parser_daemon = subparsers.add_parser("daemon", help="Ejecutar escaneo continuo en bucle")
     parser_daemon.add_argument("--interval", type=int, default=SCAN_INTERVAL_SECONDS, help="Segundos entre escaneos")
 
+    # presupuesto / budget
+    parser_budget = subparsers.add_parser("presupuesto", aliases=["budget", "recomendar"], help="Recomendar la mejor bicicleta para tu presupuesto (Podio Ejecutivo)")
+    parser_budget.add_argument("presupuesto", type=float, nargs="?", default=1000.0, help="Presupuesto máximo en € (default 1000)")
+    parser_budget.add_argument("--altura", "-a", type=int, default=None, help="Estatura en cm (default 169)")
+    parser_budget.add_argument("--talla", "-t", type=str, default=None, help="Talla nominal (ej: S, M, 52)")
+    parser_budget.add_argument("--local", "-l", action="store_true", help="Filtrar solo tiendas físicas locales")
+    parser_budget.add_argument("--canal", "-c", type=str, default="all", help="Canal de compra: all, tienda_fisica, ocasion, online")
+    parser_budget.add_argument("--no-stretch", action="store_true", help="No calcular alternativa Smart Stretch")
+    parser_budget.add_argument("--json", action="store_true", help="Salida en formato JSON estructurado")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -114,6 +144,8 @@ def main():
         cmd_test_telegram(args)
     elif args.command == "daemon":
         cmd_daemon(args)
+    elif args.command in ["presupuesto", "budget", "recomendar"]:
+        cmd_budget(args)
     else:
         # Default: mostrar listado
         cmd_list(args)

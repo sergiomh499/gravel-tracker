@@ -452,6 +452,31 @@ def get_deals(min_discount_pct: float = 15.0) -> List[sqlite3.Row]:
     rows = c.fetchall()
     conn.close()
     return rows
+
+def get_candidate_bikes_for_budget(max_price: Optional[float] = None) -> List[sqlite3.Row]:
+    """Recupera bicicletas activas para el optimizador de presupuesto.
+    Filtra a nivel de consulta tiendas en liquidación/cerradas y asegura precio válido.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    query = """
+    SELECT b.*, t.nombre as tienda_nombre, t.tipo as tienda_tipo, t.distancia_km as tienda_distancia,
+           ((b.precio_pvp - b.precio_oferta) / b.precio_pvp * 100) as descuento_pct
+    FROM bicicletas b
+    LEFT JOIN tiendas t ON b.tienda_id = t.id
+    WHERE b.precio_oferta > 0
+      AND b.en_stock = 1
+      AND (t.nombre IS NULL OR (t.nombre NOT LIKE '%CERRADA%' AND t.nombre NOT LIKE '%Liquidación%'))
+    """
+    params = []
+    if max_price is not None:
+        query += " AND b.precio_oferta <= ?"
+        params.append(max_price)
+    query += " ORDER BY b.puntuacion_total DESC, b.precio_oferta ASC"
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+    return rows
 # -------------------------------------------------------------
 # Métodos Multiusuario y Perfiles de Ciclista
 # -------------------------------------------------------------

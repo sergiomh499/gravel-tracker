@@ -69,8 +69,8 @@ def register_bot_commands():
         print(f"⚠️ No se pudo registrar setMyCommands en Telegram: {e}")
 MAIN_KEYBOARD = {
     "keyboard": [
-        [{"text": "🏆 Ver Mi Podio"}, {"text": "🔥 Chollos <1.000€"}],
-        [{"text": "🚲 Catálogo en Stock"}, {"text": "🧙‍♂️ Configurar Asistente"}],
+        [{"text": "🏆 Ver Mi Podio"}, {"text": "🎯 Optimizar Presupuesto"}],
+        [{"text": "🔥 Chollos <1.000€"}, {"text": "🧙‍♂️ Configurar Asistente"}],
         [{"text": "⚙️ Biplato (2x)"}, {"text": "⚙️ Monoplato (1x)"}],
         [{"text": "⚔️ Comparar Bicis"}, {"text": "♻️ Ocasión con Garantía"}],
         [{"text": "📍 Tiendas Físicas"}, {"text": "👤 Mi Perfil"}]
@@ -132,6 +132,23 @@ PROFILE_INLINE_KEYBOARD = {
         [
             {"text": "⚙️ Doble Plato (2x)", "callback_data": "/transmision 2x"},
             {"text": "⚙️ Monoplato (1x)", "callback_data": "/transmision 1x"}
+        ]
+    ]
+}
+
+BUDGET_PRESETS_KEYBOARD = {
+    "inline_keyboard": [
+        [
+            {"text": "🎯 <800 €", "callback_data": "/presupuesto 800"},
+            {"text": "🎯 1.000 €", "callback_data": "/presupuesto 1000"}
+        ],
+        [
+            {"text": "🎯 1.200 €", "callback_data": "/presupuesto 1200"},
+            {"text": "🎯 1.500 €", "callback_data": "/presupuesto 1500"}
+        ],
+        [
+            {"text": "📍 Tiendas Físicas", "callback_data": "/tiendas"},
+            {"text": "👤 Mi Perfil", "callback_data": "/perfil"}
         ]
     ]
 }
@@ -554,6 +571,14 @@ def _process_message(msg: Dict[str, Any]):
                 max_p = float(p_clean)
         from gravel_bot.deal_detector import format_deals_message
         send_reply(chat_id, format_deals_message(max_price=max_p or 1000.0, solo_talla_compatible=True), reply_markup=DEALS_INLINE_KEYBOARD)
+
+    elif any(text.startswith(cmd) for cmd in ["🎯", "optimizar presupuesto", "/optimizador"]):
+        send_reply(
+            chat_id,
+            "🎯 <b>OPTIMIZADOR DE PRESUPUESTO</b>\n\nElige un rango de presupuesto o escribe una cantidad exacta (ej: <code>1000</code> o <code>/presupuesto 1200</code>):",
+            reply_markup=BUDGET_PRESETS_KEYBOARD
+        )
+
     elif any(text.startswith(cmd) for cmd in ["⚙️ biplato", "biplato", "/biplato", "/2x", "doble plato"]):
         from gravel_bot.bike_inspector import format_available_bikes_message
         send_reply(chat_id, format_available_bikes_message(transmission="2x"), reply_markup=MAIN_KEYBOARD)
@@ -593,18 +618,23 @@ def _process_message(msg: Dict[str, Any]):
             send_reply(chat_id, f"✅ <b>Estatura guardada: {val} cm</b>.\nTu talla base calculada es: <b>{prof['talla_calculada']}</b>.\n\nToca <b>🏆 Ver Mi Podio</b> para ver tus opciones ideales.", reply_markup=MAIN_KEYBOARD)
         else:
             send_reply(chat_id, "⚠️ Introduce una estatura realista en cm (ej: <code>169 cm</code> o <code>mido 172</code>).")
-
-    # Detección inteligente de presupuesto (ej: "presupuesto 1000", "tengo 1200 €", "1100€")
-    elif (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})\s*€?\b', text) or
-          re.search(r'\b(\d{3,4})\s*€\b', text)):
-        m = (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})\s*€?\b', text) or
-             re.search(r'\b(\d{3,4})\s*€\b', text))
-        bud = float(m.group(1))
-        if 400 <= bud <= 5000:
+    # Detección inteligente de presupuesto (ej: "presupuesto 1000", "tengo 1200 €", "1100€", "1000")
+    elif (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})', text, re.I) or
+          re.search(r'\b(\d{3,4})\s*(?:€|euros?)', text, re.I) or
+          (text.strip().isdigit() and 300 <= int(text.strip()) <= 10000)):
+        m = (re.search(r'\b(?:presupuesto|tengo|hasta|tope)\s*(\d{3,4})', text, re.I) or
+             re.search(r'\b(\d{3,4})\s*(?:€|euros?)', text, re.I))
+        bud = float(m.group(1)) if m else float(text.strip())
+        if 300 <= bud <= 10000:
             update_user_profile(chat_id, presupuesto_max=bud)
-            send_reply(chat_id, f"✅ <b>Presupuesto fijado en {int(bud)} €</b>.\nTus opciones en <b>🏆 Ver Mi Podio</b> se han actualizado a este límite.", reply_markup=MAIN_KEYBOARD)
+            prof = get_profile_for_chat(chat_id, username)
+            estatura = prof.get("estatura_cm", 169)
+            from gravel_bot.budget_optimizer import optimize_for_budget, format_budget_podio_html
+            podio = optimize_for_budget(budget=bud, height_cm=estatura, include_stretch=True)
+            msg_html = format_budget_podio_html(podio)
+            send_reply(chat_id, msg_html, reply_markup=BUDGET_PRESETS_KEYBOARD)
         else:
-            send_reply(chat_id, "⚠️ Introduce un presupuesto entre 400 € y 5.000 € (ej: <code>1000 €</code>).")
+            send_reply(chat_id, "⚠️ Introduce un presupuesto entre 300 € y 10.000 € (ej: <code>1000 €</code>).")
 
     # Detección inteligente de modelo suelto (ej: "kalima", "jakar", "terra")
     elif text.strip() in ["kalima", "jakar", "terra", "territ", "nuroad", "grizl", "checkpoint", "esker", "x-grip", "x-strada", "asket", "atlas"]:
@@ -629,21 +659,23 @@ def _process_message(msg: Dict[str, Any]):
         parts = raw_text.split()
         if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
             val = float(parts[1])
-            holgura_val = None
-            if len(parts) >= 3 and parts[2].replace(".", "").isdigit():
-                holgura_val = float(parts[2])
-            if 400 <= val <= 10000:
+            if 300 <= val <= 10000:
                 user_id = get_or_create_user(chat_id, username)
-                update_kwargs = {"presupuesto_max": val}
-                if holgura_val is not None and 0 <= holgura_val <= 50:
-                    update_kwargs["holgura_max_pct"] = holgura_val
-                update_user_profile(user_id, **update_kwargs)
-                h_txt = f" (con holgura de +{int(holgura_val)}%)" if holgura_val is not None else ""
-                send_reply(chat_id, f"✅ <b>Presupuesto máximo fijado en {int(val)} €{h_txt}</b>.\n\nTus notas en <b>/ranking</b> se adaptan automáticamente a este tope.")
+                update_user_profile(user_id, presupuesto_max=val)
+                prof = get_profile_for_chat(chat_id, username)
+                estatura = prof.get("estatura_cm", 169)
+                from gravel_bot.budget_optimizer import optimize_for_budget, format_budget_podio_html
+                podio = optimize_for_budget(budget=val, height_cm=estatura, include_stretch=True)
+                msg_html = format_budget_podio_html(podio)
+                send_reply(chat_id, msg_html, reply_markup=BUDGET_PRESETS_KEYBOARD)
             else:
-                send_reply(chat_id, "⚠️ Rango no válido. Ej: <code>/presupuesto 1000</code> o <code>/presupuesto 1000 15</code>")
+                send_reply(chat_id, "⚠️ Rango no válido. Ej: <code>/presupuesto 1000</code> o <code>/presupuesto 1200</code>")
         else:
-            send_reply(chat_id, "ℹ️ Formato: <code>/presupuesto 1000</code> o <code>/presupuesto 1000 15</code>")
+            send_reply(
+                chat_id,
+                "🎯 <b>OPTIMIZADOR DE PRESUPUESTO</b>\n\nElige un rango de presupuesto o escribe una cantidad exacta (ej: <code>1000</code> o <code>/presupuesto 1200</code>):",
+                reply_markup=BUDGET_PRESETS_KEYBOARD
+            )
 
     elif text.startswith("/holgura") or text.startswith("/setholgura"):
         parts = raw_text.split()

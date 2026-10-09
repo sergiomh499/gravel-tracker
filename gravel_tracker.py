@@ -91,6 +91,49 @@ if __name__ == "__main__":
             listar_ranking(filtro_tier=tier_arg)
         elif cmd in ["--deals", "deals"]:
             buscar_gangas()
+        elif cmd in ["--presupuesto", "presupuesto", "--recomendar", "recomendar", "--budget", "budget"]:
+            from gravel_bot.budget_optimizer import optimize_for_budget, format_budget_recommendation_card
+            from gravel_bot.config import RIDER_PROFILE
+
+            budget_val = 1000.0
+            height_val = RIDER_PROFILE.get("estatura_cm", 169)
+            size_val = None
+            channel_val = "all"
+            json_mode = "--json" in sys.argv
+
+            args = sys.argv[2:]
+            idx = 0
+            while idx < len(args):
+                a = args[idx]
+                if a in ["--altura", "-a"] and idx + 1 < len(args):
+                    height_val = int(args[idx + 1])
+                    idx += 2
+                elif a in ["--talla", "-t", "--size"] and idx + 1 < len(args):
+                    size_val = args[idx + 1]
+                    idx += 2
+                elif a in ["--local", "-l"]:
+                    channel_val = "local_madrid"
+                    idx += 1
+                elif a in ["--canal", "-c"] and idx + 1 < len(args):
+                    channel_val = args[idx + 1]
+                    idx += 2
+                elif a == "--json":
+                    json_mode = True
+                    idx += 1
+                elif a.replace(".", "").isdigit():
+                    budget_val = float(a)
+                    idx += 1
+                else:
+                    idx += 1
+
+            podio = optimize_for_budget(
+                budget=budget_val,
+                height_cm=height_val,
+                size=size_val,
+                channel=channel_val,
+                include_stretch=True
+            )
+            print(format_budget_recommendation_card(podio, format="json" if json_mode else "text"))
         elif cmd in ["--pure-deals", "pure-deals", "--chollos", "--chollos-talla", "--chollos-zona"]:
             from gravel_bot.deal_detector import format_pure_deals_message
             from gravel_bot.config import RIDER_PROFILE

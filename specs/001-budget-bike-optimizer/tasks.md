@@ -20,8 +20,8 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 **Purpose**: Module structure initialization and data container definitions.
 
-- [ ] T001 Initialize budget optimizer module structure in `gravel_bot/budget_optimizer.py`
-- [ ] T002 [P] Configure data classes (`BudgetQuery`, `CleanCandidateBike`, `RecommendationPodio`) in `gravel_bot/budget_optimizer.py`
+- [X] T001 Initialize budget optimizer module structure in `gravel_bot/budget_optimizer.py`
+- [X] T002 [P] Configure data classes (`BudgetQuery`, `CleanCandidateBike`, `RecommendationPodio`) in `gravel_bot/budget_optimizer.py`
 
 ---
 
@@ -31,9 +31,9 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 **⚠️ CRITICAL**: Must be completed before user story implementation begins.
 
-- [ ] T003 Implement candidate bikes extraction query helper in `gravel_bot/db.py`
-- [ ] T004 [P] Implement Value-for-Money (VfM) index calculation logic in `gravel_bot/budget_optimizer.py`
-- [ ] T005 [P] Setup baseline unit test harness for budget optimizer in `test_new_features.py`
+- [X] T003 Implement candidate bikes extraction query helper in `gravel_bot/db.py`
+- [X] T004 [P] Implement Value-for-Money (VfM) index calculation logic in `gravel_bot/budget_optimizer.py`
+- [X] T005 [P] Setup baseline unit test harness for budget optimizer in `test_new_features.py`
 
 **Checkpoint**: Foundation ready — user story implementation can proceed.
 
@@ -47,14 +47,14 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Write unit tests for budget ceiling filtering and podio ranking in `test_new_features.py`
+- [X] T006 [P] [US1] Write unit tests for budget ceiling filtering and podio ranking in `test_new_features.py`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Implement primary recommendation ranking algorithm (`optimize_for_budget`) in `gravel_bot/budget_optimizer.py`
-- [ ] T008 [US1] Implement executive terminal card text formatter in `gravel_bot/budget_optimizer.py`
-- [ ] T009 [US1] Implement CLI `--presupuesto`, `--recomendar`, and `--json` flags in `gravel_tracker.py`
-- [ ] T010 [US1] Wire CLI subcommands, argument parsing, and help text in `gravel_bot/cli.py`
+- [X] T007 [US1] Implement primary recommendation ranking algorithm (`optimize_for_budget`) in `gravel_bot/budget_optimizer.py`
+- [X] T008 [US1] Implement executive terminal card text formatter in `gravel_bot/budget_optimizer.py`
+- [X] T009 [US1] Implement CLI `--presupuesto`, `--recomendar`, and `--json` flags in `gravel_tracker.py`
+- [X] T010 [US1] Wire CLI subcommands, argument parsing, and help text in `gravel_bot/cli.py`
 
 **Checkpoint**: User Story 1 functional and independently testable as an MVP.
 
@@ -68,13 +68,13 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Write unit tests for bare frames, ebikes, closed shops, and size exclusion in `test_new_features.py`
+- [X] T011 [P] [US2] Write unit tests for bare frames, ebikes, closed shops, and size exclusion in `test_new_features.py`
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Implement deterministic noise exclusion filters (`is_complete_gravel_bike`, `is_active_store`) in `gravel_bot/budget_optimizer.py`
-- [ ] T013 [US2] Implement rider size and height compatibility validation against catalog size lists in `gravel_bot/budget_optimizer.py`
-- [ ] T014 [US2] Integrate noise exclusion predicates into database catalog queries in `gravel_bot/db.py`
+- [X] T012 [US2] Implement deterministic noise exclusion filters (`is_complete_gravel_bike`, `is_active_store`) in `gravel_bot/budget_optimizer.py`
+- [X] T013 [US2] Implement rider size and height compatibility validation against catalog size lists in `gravel_bot/budget_optimizer.py`
+- [X] T014 [US2] Integrate noise exclusion predicates into database catalog queries in `gravel_bot/db.py`
 
 **Checkpoint**: User Stories 1 and 2 operate in tandem with zero false-positive listings.
 
@@ -88,13 +88,13 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Write unit tests for +15% budget stretch and hydraulic brake threshold detection in `test_new_features.py`
+- [X] T015 [P] [US3] Write unit tests for +15% budget stretch and hydraulic brake threshold detection in `test_new_features.py`
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Implement Smart Stretch evaluation algorithm (threshold jumps) in `gravel_bot/budget_optimizer.py`
-- [ ] T017 [US3] Implement Budget Saver alternative detection ($\le 0.85B$) in `gravel_bot/budget_optimizer.py`
-- [ ] T018 [US3] Add Smart Stretch and Budget Saver sections to card formatters in `gravel_bot/budget_optimizer.py`
+- [X] T016 [US3] Implement Smart Stretch evaluation algorithm (threshold jumps) in `gravel_bot/budget_optimizer.py`
+- [X] T017 [US3] Implement Budget Saver alternative detection ($\le 0.85B$) in `gravel_bot/budget_optimizer.py`
+- [X] T018 [US3] Add Smart Stretch and Budget Saver sections to card formatters in `gravel_bot/budget_optimizer.py`
 
 **Checkpoint**: User Story 3 delivers actionable trade-off advice alongside primary recommendations.
 
@@ -108,10 +108,10 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T019 [P] [US4] Implement store channel categorization (`tienda_fisica`, `online`, `ocasion`) in `gravel_bot/budget_optimizer.py`
-- [ ] T020 [US4] Implement `/presupuesto` command handler and HTML formatting in `gravel_bot/bot_service.py`
-- [ ] T021 [US4] Add interactive Telegram preset keyboard buttons (`<800€`, `1.000€`, `1.200€`, `1.500€`) in `gravel_bot/bot_service.py`
-- [ ] T022 [US4] Implement conversational numeric message handler for budget queries in `gravel_bot/bot_service.py`
+- [X] T019 [P] [US4] Implement store channel categorization (`tienda_fisica`, `online`, `ocasion`) in `gravel_bot/budget_optimizer.py`
+- [X] T020 [US4] Implement `/presupuesto` command handler and HTML formatting in `gravel_bot/bot_service.py`
+- [X] T021 [US4] Add interactive Telegram preset keyboard buttons (`<800€`, `1.000€`, `1.200€`, `1.500€`) in `gravel_bot/bot_service.py`
+- [X] T022 [US4] Implement conversational numeric message handler for budget queries in `gravel_bot/bot_service.py`
 
 **Checkpoint**: All user stories functional across both CLI and Telegram bot interfaces.
 
@@ -121,9 +121,9 @@ description: "Task list for Budget Bike Optimizer implementation"
 
 **Purpose**: End-to-end verification, documentation updates, and catalog validation.
 
-- [ ] T023 [P] Add end-to-end smoke verification script per `quickstart.md` in `test_new_features.py`
-- [ ] T024 [P] Update user documentation and command guide in `directorio_bicicletas.md`
-- [ ] T025 Run catalog integrity check and purge verification in `gravel_tracker.py`
+- [X] T023 [P] Add end-to-end smoke verification script per `quickstart.md` in `test_new_features.py`
+- [X] T024 [P] Update user documentation and command guide in `directorio_bicicletas.md`
+- [X] T025 Run catalog integrity check and purge verification in `gravel_tracker.py`
 
 ---
 
