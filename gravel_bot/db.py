@@ -332,6 +332,35 @@ def record_price_if_changed(bike_id: int, store_id: Optional[int], price: float,
         conn.commit()
     conn.close()
     return should_record
+def check_price_drop(bike_id: int, new_price: float, min_drop_eur: float = 75.0, min_drop_pct: float = 10.0) -> Optional[Dict[str, Any]]:
+    """
+    Comprueba si el nuevo precio supone una rebaja significativa respecto al último precio registrado
+    en historial_precios (mínimo min_drop_eur € o min_drop_pct %).
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+    SELECT precio, fecha_registro FROM historial_precios
+    WHERE bicicleta_id = ?
+    ORDER BY id DESC LIMIT 1
+    """, (bike_id,))
+    last = c.fetchone()
+    conn.close()
+    if not last:
+        return None
+    old_price = float(last["precio"])
+    diff = old_price - new_price
+    pct = (diff / old_price) * 100.0 if old_price > 0 else 0.0
+    if (diff >= min_drop_eur or pct >= min_drop_pct) and diff > 0:
+        return {
+            "old_price": old_price,
+            "new_price": new_price,
+            "drop_eur": round(diff, 2),
+            "drop_pct": round(pct, 1),
+            "fecha_anterior": last["fecha_registro"]
+        }
+    return None
+
 
 def get_bike_price_history(identifier: Any) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """

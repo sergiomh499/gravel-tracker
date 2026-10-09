@@ -52,11 +52,13 @@ jobs:
         run: |
           git config user.name "Gravel Bot"
           git config user.email "bot@gravel.local"
-          git add gravel_madrid.db directorio_bicicletas.md
+          # Sincronizar concurrentemente resolviendo conflictos binarios a favor de la ejecución actual
+          git pull --rebase origin main || (git checkout --theirs gravel_madrid.db && git add gravel_madrid.db && git rebase --continue) || true
+          git add gravel_madrid.db directorio_bicicletas.md catalog_snapshot.json
           # Solo hace commit si hay cambios reales en los precios, stock o registros
           if ! git diff --staged --quiet; then
-            git pull --rebase origin main || true
             git commit -m "Auto-update: sincronización robótica de stock, precios y Tier List [skip ci]"
-            git push
+            git push origin main || (git pull --rebase origin main && git push origin main) || true
+          else
             echo "No hay variaciones en la base de datos ni en el Tier List."
           fi

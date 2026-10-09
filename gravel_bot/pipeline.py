@@ -5,15 +5,16 @@ gravel_bot.pipeline - Motor de Automatización, Ingesta, Valoración y Alertas
 import time
 import sqlite3
 import re
+import json
 from typing import Dict, Any, List
 from gravel_bot.config import ALERT_CRITERIA, DB_PATH
 from gravel_bot.db import (
     init_db, get_or_create_store, upsert_bike,
-    record_price_if_changed, was_alert_sent, mark_alert_sent
+    record_price_if_changed, check_price_drop, was_alert_sent, mark_alert_sent
 )
 from gravel_bot.evaluator import detect_bike_specs
 from gravel_bot.scrapers import get_all_scrapers
-from gravel_bot.notifier import send_telegram_alert
+from gravel_bot.notifier import send_telegram_alert, format_price_drop_message
 
 
 def sync_directorio_markdown(db_path: str = DB_PATH, md_path: str = "directorio_bicicletas.md"):
@@ -83,6 +84,33 @@ def sync_directorio_markdown(db_path: str = DB_PATH, md_path: str = "directorio_
         print(f"📄 [AUTO-DOC] {md_path} sincronizado con {len(rows)} modelos líderes en stock.")
     except Exception as e:
         print(f"⚠️ [AUTO-DOC] Error sincronizando {md_path}: {e}")
+def export_catalog_snapshot(db_path: str = DB_PATH, json_path: str = "catalog_snapshot.json"):
+    """
+    Exporta un snapshot en formato JSON plano y determinista de todas las bicicletas activas
+    para control de versiones limpio, diffs legibles en Git y respaldo frente a corrupciones de BD.
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""
+            SELECT b.id, b.marca, b.modelo, b.tier, b.nota, b.precio_oferta, b.precio_pvp,
+                   b.talla_recomendada_169, b.tallas_disponibles, b.transmision, b.frenos,
+                   t.nombre as tienda, b.url_oferta
+            FROM bicicletas b
+            LEFT JOIN tiendas t ON b.tienda_id = t.id
+            WHERE b.en_stock = 1
+            ORDER BY b.tier ASC, b.nota DESC, b.precio_oferta ASC
+        """)
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(rows, f, indent=2, ensure_ascii=False)
+        print(f"📦 [SNAPSHOT] {json_path} generado con {len(rows)} bicicletas activas en formato texto.")
+    except Exception as e:
+        print(f"⚠️ [SNAPSHOT] Error exportando {json_path}: {e}")
+
 
 
 def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool = False) -> Dict[str, Any]:
@@ -146,7 +174,8 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
                 bike_id = upsert_bike(specs)
                 saved_count += 1
 
-                # 3. Registro en Historial de Precios
+                # 3. Comprobación y Registro en Historial de Precios
+                price_drop = check_price_drop(bike_id, item["price"])
                 record_price_if_changed(
                     bike_id=bike_id,
                     store_id=store_id,
@@ -157,6 +186,15 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
                     note=f"Rastreo automático {scraper.store_name}"
                 )
 
+                # Notificación prioritaria de bajada de precio detectada
+                if price_drop and send_alerts:
+                    specs_with_store = dict(specs)
+                    specs_with_store["tienda_nombre"] = scraper.store_name
+                    drop_msg = format_price_drop_message(specs_with_store, price_drop)
+                    if verbose:
+                        print(f"\n📉 [BAJADA DE PRECIO] {specs['marca']} {specs['modelo']} -> -{price_drop['drop_eur']}€ (-{price_drop['drop_pct']}%) a {item['price']}€")
+                    send_telegram_alert(drop_msg)
+                    alerts_triggered += 1
                 # 4. Evaluación de Criterio de Alerta
                 is_top_tier = specs["tier"] in ALERT_CRITERIA["tiers_permitidos"]
                 is_good_score = specs["nota"] >= ALERT_CRITERIA["nota_minima"]
@@ -176,8 +214,9 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
         except Exception as e:
             print(f"❌ [ERROR] Fallo en scraper {scraper.name}: {e}")
 
-    # 5. Sincronizar directorio markdown automáticamente
+    # 5. Sincronizar directorio markdown y snapshot JSON automáticamente
     sync_directorio_markdown()
+    export_catalog_snapshot()
 
     summary = {
         "scraped_count": total_scraped,

@@ -35,11 +35,11 @@ jobs:
         run: |
           git config user.name "Gravel Bot Cloud"
           git config user.email "bot-cloud@gravel.local"
-          git add gravel_madrid.db
+          git pull --rebase origin main || (git checkout --theirs gravel_madrid.db && git add gravel_madrid.db && git rebase --continue) || true
+          git add gravel_madrid.db catalog_snapshot.json
           if ! git diff --staged --quiet; then
-            git pull --rebase origin main || true
             git commit -m "Auto-sync: base de datos actualizada por el bot en GitHub [skip ci]"
-            git push
+            git push origin main || (git pull --rebase origin main && git push origin main) || true
           else
             echo "Sin cambios en la base de datos tras la sesión."
           fi

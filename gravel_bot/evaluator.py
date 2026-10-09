@@ -45,6 +45,8 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         disciplina = "ebike_gravel"
     elif "junior" in full_text or "niño" in full_text:
         disciplina = "junior"
+    elif "ciclocross" in full_text and "gravel" not in full_text:
+        disciplina = "ciclocross"
     elif "carretera" in full_text and "gravel" not in full_text:
         disciplina = "carretera"
     elif "mtb" in full_text or "mountain" in full_text:
@@ -87,9 +89,17 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
 
     if "horquilla aluminio" in full_text or "fork alu" in full_text:
         horquilla = "Aluminio rígido"
-
-    # 6. Patilla UDH
+    # 6. Patilla UDH y Paso de Rueda
     patilla_udh = 1 if ("udh" in full_text or "sram udh" in full_text or "universal derailleur" in full_text) else (model_spec.get("udh", 0) if model_spec else 0)
+    paso_rueda_apto = True
+    if any(re.search(pat, full_text) for pat in [
+        r'\bmax(?:imo)?\s*(?:3[0-5]|2[0-9])\s*mm\b',
+        r'\bpaso(?:\s+de\s+rueda)?\s*(?:3[0-5]|2[0-9])\s*mm\b',
+        r'\buci\s*33\b',
+        r'\bcx\s*race\b'
+    ]):
+        paso_rueda_apto = False
+
     # 7. Compatibilidad Dinámica de Talla según Marca y Modelo (no global)
     if disciplina != "gravel":
         talla_valida = False
@@ -110,11 +120,14 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         horquilla=horquilla,
         patilla_udh=patilla_udh,
         precio=price,
-        talla_valida=talla_valida
+        talla_valida=talla_valida,
+        paso_rueda_apto=paso_rueda_apto
     )
 
     # 9. Veredicto sintético
     veredicto = f"Detectado {marca} con {transmision_desc} y {frenos_desc}. {explicacion_talla}"
+    if not paso_rueda_apto:
+        veredicto += " ⚠️ Paso de rueda limitado (<38mm); penalizada para pistas de tierra."
     # Generar Slug limpio e invariante al precio para acumular historial del mismo modelo
     slug = re.sub(r'[^a-zA-Z0-9]+', '_', title.lower()).strip('_')[:50]
     return {
@@ -145,14 +158,15 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
         "tier": tier,
         "notas_veredicto": veredicto,
         "climbing_ratio": bio_info.get("climbing_ratio", 0.85),
-        "lowest_gear_inches": bio_info.get("lowest_gear_inches", 24.0),
         "highest_gear_inches": bio_info.get("highest_gear_inches", 115.0),
-        "apto_tierra": bio_info.get("apto_tierra", True)
+        "apto_tierra": bio_info.get("apto_tierra", True) and paso_rueda_apto,
+        "paso_rueda_apto": paso_rueda_apto
     }
 
 def calcular_rubrica(disciplina: str, tipo_frenos: str, tipo_transmision: str,
                      cuadro: str, horquilla: str, patilla_udh: int,
-                     precio: float, talla_valida: bool) -> Tuple[float, float, float, float, float, float, float, str]:
+                     precio: float, talla_valida: bool,
+                     paso_rueda_apto: bool = True) -> Tuple[float, float, float, float, float, float, float, str]:
     """
     Rúbrica matemática ponderada para ciclista de 1,69 m en Madrid (Méndez Álvaro).
     Fórmula: P = C1 (Frenos 25%) + C2 (Transmisión 25%) + C3 (Cuadro 20%) + C4 (Precio 20%) + C5 (Talla 10%)
@@ -201,6 +215,9 @@ def calcular_rubrica(disciplina: str, tipo_frenos: str, tipo_transmision: str,
     else:
         c3 = 6.0
 
+    # Penalización rígida si el paso de rueda es < 38mm (geometría CX pura o limitada)
+    if not paso_rueda_apto:
+        c3 = min(c3, 8.0)
     # C4. Precio y Logística (20 pts)
     if precio <= 1150:
         c4 = 20.0 if c1 >= 20 else 18.0
@@ -324,6 +341,8 @@ def calcular_rubrica_personalizada(bike: Dict[str, Any], perfil: Dict[str, Any])
     else:
         c3 = 8.0
 
+    if bike.get("paso_rueda_apto") is False:
+        c3 = min(c3, 8.0)
     # 4. C4: Precio adaptado al presupuesto con holgura por buena oferta (20 pts)
     presupuesto = float(perfil.get("presupuesto_max", 1000.0))
     holgura_pct = float(perfil.get("holgura_max_pct", 15.0))

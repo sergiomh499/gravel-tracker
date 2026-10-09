@@ -308,5 +308,46 @@ class TestNewFeatures(unittest.TestCase):
         self.assertEqual(scraper.max_pages, 2)
         self.assertEqual(scraper.deep_pages, 5)
 
+    def test_price_drop_and_history_and_clearance(self):
+        """Verifica la detección de bajadas de precio, mínimo histórico y penalización de paso de rueda."""
+        from gravel_bot.db import check_price_drop, record_price_if_changed, get_connection
+        from gravel_bot.notifier import format_price_drop_message
+        from gravel_bot.deal_detector import format_bike_price_history_message
+        from gravel_bot.evaluator import detect_bike_specs
+        from gravel_bot.pipeline import export_catalog_snapshot
+
+        # 1. Bajada de precio
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT id FROM bicicletas LIMIT 1")
+        b_id = c.fetchone()["id"]
+        conn.close()
+
+        record_price_if_changed(b_id, 1, 1500.0, "S", 1, "https://test.com/bici", "Base")
+        drop = check_price_drop(b_id, 1200.0)
+        self.assertIsNotNone(drop)
+        self.assertEqual(drop["drop_eur"], 300.0)
+        self.assertEqual(drop["drop_pct"], 20.0)
+
+        msg_drop = format_price_drop_message({"marca": "Test", "modelo": "Drop", "tier": "Tier S", "talla_recomendada_169": "S", "url_oferta": "https://test.com"}, drop)
+        self.assertIn("BAJADA DE PRECIO", msg_drop)
+
+        # 2. Historial con mínimo histórico
+        hist_msg = format_bike_price_history_message("Kalima")
+        self.assertIn("HISTORIAL DE PRECIOS", hist_msg)
+        self.assertTrue("Mínimo histórico" in hist_msg or "MÍNIMO HISTÓRICO" in hist_msg)
+
+        # 3. Penalización de paso de rueda estrecho / CX
+        b_cx = detect_bike_specs("Bicicleta Gravel CX Race UCI 33mm", price=1100.0)
+        self.assertFalse(b_cx["paso_rueda_apto"])
+        self.assertLessEqual(b_cx["c3_cuadro"], 8.0)
+        self.assertIn("Paso de rueda limitado", b_cx["notas_veredicto"])
+
+        # 4. Snapshot texto
+        import os
+        snap_file = "test_catalog_snapshot.json"
+        export_catalog_snapshot(json_path=snap_file)
+        self.assertTrue(os.path.exists(snap_file))
+        os.remove(snap_file)
 if __name__ == "__main__":
     unittest.main()

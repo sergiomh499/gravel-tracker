@@ -46,6 +46,34 @@ def format_alert_message(bike: Dict[str, Any]) -> str:
         f" • <b>Ratio de Subida:</b> Climbing Ratio {bike.get('climbing_ratio', 0.85)} (Mín: {bike.get('lowest_gear_inches', 24.0)}\")\n\n"
     )
     return msg
+def format_price_drop_message(bike: Dict[str, Any], drop_info: Dict[str, Any]) -> str:
+    """Formatea el mensaje de alerta para caídas de precio significativas."""
+    marca = bike.get("marca", "")
+    modelo = bike.get("modelo", "")
+    old_p = drop_info.get("old_price", 0.0)
+    new_p = drop_info.get("new_price", 0.0)
+    diff_eur = drop_info.get("drop_eur", 0.0)
+    pct = drop_info.get("drop_pct", 0.0)
+    url = bike.get("url_oferta", "")
+    tier = bike.get("tier", "Tier S")
+    talla = bike.get("talla_recomendada_169", "S")
+    tienda = bike.get("tienda_nombre", "Tienda online/local")
+
+    msg = (
+        f"📉 <b>¡BAJADA DE PRECIO DETECTADA!</b> 📉\n\n"
+        f"🚲 <b><a href='{url}'>{marca} {modelo}</a></b>\n"
+        f"🎯 <b>Nivel:</b> {tier} ({bike.get('nota', 8.5)}/10)\n"
+        f"💰 <b>Precio Anterior:</b> <s>{old_p:,.2f} €</s>\n"
+        f"🔥 <b>Nuevo Precio:</b> <b>{new_p:,.2f} €</b>\n"
+        f"💸 <b>Rebaja:</b> <b>-{diff_eur:,.2f} € (-{pct:.1f}%)</b>\n"
+        f"📏 <b>Talla sugerida (1,69 m):</b> <b>{talla}</b>\n"
+        f"📍 <b>Tienda:</b> {tienda}\n"
+        f"⚙️ <b>Transmisión:</b> {bike.get('transmision', 'Consultar')}\n"
+        f"🛑 <b>Frenos:</b> {bike.get('frenos', 'Consultar')}\n\n"
+        f"🔗 <a href='{url}'>Ver oferta en tienda</a>"
+    )
+    return msg
+
 
 def send_telegram_alert(bike_or_text: Any) -> bool:
     """

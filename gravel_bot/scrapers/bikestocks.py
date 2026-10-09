@@ -53,11 +53,16 @@ class BikestocksScraper(BaseScraper):
             if pvp < price:
                 pvp = price
 
-            # 4. Tallas reales detectadas
-            size_matches = set(re.findall(r'class="bonattribute-btn[^"]*"[^>]*title="([^"]+)"', a) + re.findall(r'talla-([a-z0-9]+)', a, re.I))
+            # 4. Tallas reales detectadas (selector PrestaShop o parámetro de URL opcion-X)
+            size_matches = set(
+                re.findall(r'class="bonattribute-btn[^"]*"[^>]*title="([^"]+)"', a) +
+                re.findall(r'talla-([a-z0-9]+)', a, re.I) +
+                re.findall(r'opcion-([a-z0-9]+)', link, re.I)
+            )
             if not size_matches:
                 size_matches = set(re.findall(r'\b(?:talla|size|t\.)\s*([a-z0-9]+)\b', f"{name} {link}", re.I))
-            sizes = sorted([s.upper().strip() for s in size_matches if s.strip() and len(s.strip()) <= 4])
+            valid_tokens = {'XXS', 'XS', 'S', 'SM', 'M', 'MD', 'L', 'LG', 'XL', 'XXL'} | {str(n) for n in range(46, 63)}
+            sizes = sorted([s.upper().strip() for s in size_matches if s.upper().strip() in valid_tokens])
             disc_pct = round((pvp - price) / pvp * 100) if pvp > price else 0
 
             results.append({

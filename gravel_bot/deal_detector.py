@@ -130,14 +130,27 @@ def format_bike_price_history_message(query: str) -> str:
         return f"ℹ️ No se ha encontrado ninguna bicicleta en la base de datos que coincida con '{query}'."
 
     msg = f"📊 <b>HISTORIAL DE PRECIOS: {bike['marca']} {bike['modelo']}</b>\n"
-    msg += f"💰 <b>Precio Actual: {int(bike['precio_oferta'])} €</b> (PVP: {int(bike.get('precio_pvp') or bike['precio_oferta'])} €)\n"
-    msg += f"🏷️ <i>Tier: {bike['tier']} | Puntuación Rúbrica: {bike['nota']}/10</i>\n\n"
+    pvp_val = int(bike.get('precio_pvp') or bike['precio_oferta'])
+    cur_val = int(bike['precio_oferta'])
+    msg += f"💰 <b>Precio Actual: {cur_val} €</b> (PVP: {pvp_val} €)\n"
+    msg += f"🏷️ <i>Tier: {bike['tier']} | Puntuación Rúbrica: {bike['nota']}/10</i>\n"
 
     if not history:
-        msg += "<i>Aún no hay registros de fluctuaciones guardados para este modelo.</i>"
+        msg += "\n<i>Aún no hay registros adicionales de fluctuaciones guardados para este modelo.</i>"
         return msg
 
-    msg += "<b>Evolución cronológica de precios detectados:</b>\n"
+    # Análisis de Mínimo Histórico
+    min_entry = min(history, key=lambda x: float(x["precio"]))
+    min_p = int(float(min_entry["precio"]))
+    min_fecha = min_entry["fecha_registro"][:10]
+    
+    if cur_val <= min_p:
+        msg += f"🔥 <b>¡MÍNIMO HISTÓRICO ABSOLUTO!</b> (Registrado hoy a {cur_val} €)\n\n"
+    else:
+        dif_min = cur_val - min_p
+        msg += f"💡 <b>Mínimo histórico registrado:</b> {min_p} € (el {min_fecha}) | Dif: +{dif_min} €\n\n"
+
+    msg += "<b>Evolución cronológica de precios:</b>\n"
     prev_price = None
     for h in history:
         p = int(h["precio"])

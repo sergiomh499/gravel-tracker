@@ -193,9 +193,11 @@ def get_bike_inline_keyboard(bike: Dict[str, Any]) -> Dict[str, Any]:
         {"text": f"⚔️ vs {rival.title()}", "callback_data": f"/vs {m_token} {rival}"},
         {"text": f"⚙️ Cadencia {dev_arg}", "callback_data": f"/desarrollo {dev_arg}"}
     ])
-
     talla_raw = str(bike.get("talla_recomendada_169", "S")).split()[0]
-    rows.append([{"text": f"🔔 Avisar si reponen ({talla_raw})", "callback_data": f"/avisatalla {m_token} {talla_raw}"}])
+    rows.append([
+        {"text": "📈 Mínimo Histórico", "callback_data": f"/historial {m_token}"},
+        {"text": f"🔔 Avisar si reponen ({talla_raw})", "callback_data": f"/avisatalla {m_token} {talla_raw}"}
+    ])
     return {"inline_keyboard": rows}
 def send_reply(chat_id: int, text: str, reply_markup: Optional[Dict[str, Any]] = None):
     """Envía un mensaje formateado a Telegram con auto-chunking seguro (<3800 chars) y teclado interactivo."""
