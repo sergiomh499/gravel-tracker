@@ -40,7 +40,7 @@
 ---
 
 ### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
-*Última sincronización robótica:* `2026-10-08 14:29:06` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+*Última sincronización robótica:* `2026-10-09 13:08:11` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
 
 | # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
