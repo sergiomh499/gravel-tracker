@@ -76,25 +76,25 @@ python3 gravel_tracker.py --web --port 8090
 ---
 
 ### 📡 Monitor de Stock en Tiempo Real (Actualizado Automáticamente)
-*Última sincronización robótica:* `2026-10-09 19:44:18` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
+*Última sincronización robótica:* `2026-10-10 12:18:39` | *Filtro:* $\le 1.350$ € · Talla S/XS · 50% Asfalto / 50% Tierra
 
 | # | Modelo | Precio Oferta (PVP) | Tier | Nota | Talla | Tienda | Estado Stock |
 | :-: | :--- | :---: | :---: | :---: | :---: | :--- | :---: |
-| 1 | [Megamo Gravel Megamo Jakar 30 (2024)](https://es.wallapop.com/item/bicicleta-gravel-megamo-jakar-30-2024-1307660430) | **790.0 €** *(1066.5 €)* | **Tier S+** | 10.0/10 | S (52 cm) | Wallapop (Particulares Madrid 25km) | 🟢 En Stock |
-| 2 | [MMR X-Grip 30 Charcoal](https://www.elcorteingles.es/deportes/A200805188-gris-negro-pr-bicicleta-de-gravel-unisex-x-grip-30-charcoal-mmr/) | **1299.0 €** ** | **Tier S+** | 9.8/10 | S (51-52 cm) | El Corte Inglés Deportes | 🟢 En Stock |
-| 3 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Biciescapa Madrid | 🟢 En Stock |
-| 4 | [Megamo Jakar 30 Flat-Bar 2027](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-flat-bar-2027-92864) | **999.0 €** *(1248.75 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Biciescapa Madrid | 🟢 En Stock |
-| 5 | [Van Rysel Gravel Van Rysel GRVL AF Microshift Swor](https://www.decathlon.es/es/deportes/ciclismo/bicicletas-gravel) | **899.0 €** ** | **Tier S+** | 9.7/10 | S (51-52 cm) | Decathlon Usera / Madrid Río | 🟢 En Stock |
+| 1 | [Orbea Terra H30 1X (Certificada Tuvalum Garantía 1](https://tuvalum.com/collections/bicicletas-gravel/products/orbea-terra-h30) | **1080.0 €** *(1699.0 €)* | **Tier S+** | 9.9/10 | S (51 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 2 | [MMR X-Grip 30 Charcoal](https://www.elcorteingles.es/deportes/A200805188-gris-negro-pr-bicicleta-de-gravel-unisex-x-grip-30-charcoal-mmr/) | **1299.0 €** ** | **Tier S+** | 9.9/10 | S (51-52 cm) | El Corte Inglés Deportes | 🟢 En Stock |
+| 3 | [Megamo Jakar 30 GRX (Reacondicionada Certificada)](https://tuvalum.com/collections/bicicletas-gravel/products/megamo-jakar-30) | **990.0 €** *(1499.0 €)* | **Tier S+** | 9.8/10 | S (52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 4 | [Megamo Jakar 30 2026](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-2026/) | **1099.0 €** *(1373.75 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Biciescapa Madrid | 🟢 En Stock |
+| 5 | [Megamo Jakar 30 Flat-Bar 2027](https://www.escapa.com/bicicletas/bicicleta-megamo-jakar-30-flat-bar-2027-92864) | **999.0 €** *(1248.75 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Biciescapa Madrid | 🟢 En Stock |
 | 6 | [Orbea Terra H30 2024 (Reacondicionada Certificada)](https://buycycle.com/es-es/bike/orbea-terra-h30-2024) | **1099.0 €** *(1699.0 €)* | **Tier S+** | 9.7/10 | S (51 cm) | Buycycle España / Europa | 🟢 En Stock |
 | 7 | [Canyon Grizl 7 AL Suspension (Inspección Buycycle)](https://buycycle.com/es-es/bike/canyon-grizl-7-al) | **1150.0 €** *(1899.0 €)* | **Tier S+** | 9.7/10 | XS | Buycycle España / Europa | 🟢 En Stock |
 | 8 | [Cube Nuroad Race (Segunda Mano Verificada)](https://buycycle.com/es-es/bike/cube-nuroad-race) | **1050.0 €** *(1599.0 €)* | **Tier S+** | 9.7/10 | S (53) | Buycycle España / Europa | 🟢 En Stock |
-| 9 | [Orbea Terra H30 1X (Certificada Tuvalum Garantía 1](https://tuvalum.com/collections/bicicletas-gravel/products/orbea-terra-h30) | **1080.0 €** *(1699.0 €)* | **Tier S+** | 9.7/10 | S (51 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
-| 10 | [Megamo Jakar 30 GRX (Reacondicionada Certificada)](https://tuvalum.com/collections/bicicletas-gravel/products/megamo-jakar-30) | **990.0 €** *(1499.0 €)* | **Tier S+** | 9.7/10 | S (52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
-| 11 | [Trek Gravel Trek Checkpoint ALR 5 (2019)](https://es.wallapop.com/item/bicicleta-gravel-trek-checkpoint-alr-5-2019-1311163342) | **900.0 €** *(1215.0 €)* | **Tier S+** | 9.7/10 | 52 cm | Wallapop (Particulares Madrid 25km) | 🟢 En Stock |
-| 12 | [Kross Esker 6.0 GRX 2x11v](https://www.tradeinn.com/bikeinn/es/kross-esker-6.0-700-grx-rx820-2025-gravel-bike/141928636/p) | **1299.0 €** *(1799.0 €)* | **Tier S+** | 9.5/10 | S (51-52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
-| 13 | [Orbea Terra H40](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier S+** | 9.5/10 | S (51 cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
-| 14 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier S+** | 9.5/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
-| 15 | [Conor Gravel Conor Kalima GRX610 2x12](https://www.bicimarket.com/es/bicicletas/gravel/57969-conor-kalima-grx610-2x12.html) | **1199.0 €** ** | **Tier S+** | 9.5/10 | SM (51 cm) | Bicimarket Red Nacional | 🟢 En Stock |
+| 9 | [Trek Gravel Trek Checkpoint ALR 5 (2019)](https://es.wallapop.com/item/bicicleta-gravel-trek-checkpoint-alr-5-2019-1311163342) | **820.0 €** *(1107.0 €)* | **Tier S+** | 9.7/10 | 52 cm | Wallapop (Particulares Madrid 25km) | 🟢 En Stock |
+| 10 | [Van Rysel Gravel GRVL AF Discover Verde Microshift](https://es.wallapop.com/item/bicicleta-gravel-grvl-af-discover-verde-microshift-acolyte-1308991757) | **750.0 €** *(1012.5000000000001 €)* | **Tier S+** | 9.7/10 | S (51-52 cm) | Wallapop (Particulares Madrid 25km) | 🟢 En Stock |
+| 11 | [Kross Esker 6.0 GRX 2x11v](https://www.tradeinn.com/bikeinn/es/kross-esker-6.0-700-grx-rx820-2025-gravel-bike/141928636/p) | **1299.0 €** *(1799.0 €)* | **Tier S+** | 9.7/10 | S (51-52 cm) | Tuvalum (CERRADA - Liquidación Concursal) | 🟢 En Stock |
+| 12 | [Orbea Terra H40](https://ciclismo.calmera.es/gravel-y-ciclocross/6405-14520-orbea-terra-h40-23-8434446226502.html#/597-talla-s/933-color-mango) | **1250.0 €** *(1849.0 €)* | **Tier S+** | 9.6/10 | S (51 cm) | Calmera Ciclismo Atocha | 🟢 En Stock |
+| 13 | [Scott Speedster Gravel 30 2026](https://www.sanferbike.com/es/gravel-y-ciclocross/bicicletas-gravel/124591-bicicleta-scott-speedster-gravel-30-2026-1249079.html#/1-tallas-s/602-colores-morado) | **1279.2 €** *(1599.0 €)* | **Tier S+** | 9.5/10 | S (52 cm) | Sanferbike M-30 | 🟢 En Stock |
+| 14 | [Conor Gravel Conor Kalima GRX610 2x12](https://www.bicimarket.com/es/bicicletas/gravel/57969-conor-kalima-grx610-2x12.html) | **1199.0 €** ** | **Tier S+** | 9.5/10 | SM (51 cm) | Bicimarket Red Nacional | 🟢 En Stock |
+| 15 | [Canyon Grizl 6 1BY](https://www.canyon.com/es-es/outlet/gravel-bikes/) | **1199.0 €** *(1378.85 €)* | **Tier S+** | 9.5/10 | XS | Canyon Outlet Oficial España | 🟢 En Stock |
 
 ---
 

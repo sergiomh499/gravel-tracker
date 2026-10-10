@@ -83,10 +83,9 @@ def send_telegram_alert(bike_or_text: Any) -> bool:
     token = TELEGRAM_BOT_TOKEN
     chat_id = TELEGRAM_CHAT_ID
 
-    if isinstance(bike_or_text, str):
-        msg = bike_or_text
-    else:
-        msg = format_alert_message(bike_or_text)
+    msg = bike_or_text if isinstance(bike_or_text, str) else format_alert_message(bike_or_text)
+
+    if not token or not chat_id:
         print("\n" + "="*60)
         print("📢 [AVISO TELEGRAM PENDIENTE DE CONFIGURAR]")
         print("Para recibir alertas instantáneas en tu móvil, define:")
@@ -97,7 +96,6 @@ def send_telegram_alert(bike_or_text: Any) -> bool:
         print(msg.replace("<b>", "").replace("</b>", "").replace("<code>", "").replace("</code>", "").replace("<s>", "").replace("</s>", "").replace("<a href='", "[").replace("'>", "] "))
         print("="*60 + "\n")
         return False
-
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
