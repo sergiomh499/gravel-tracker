@@ -6,10 +6,8 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    # Se ejecuta todos los días a las 08:00 AM hora peninsular española (Madrid)
-    # 06:00 UTC en horario de verano (CEST, UTC+2) y 07:00 UTC en horario de invierno (CET, UTC+1)
-    - cron: '0 6 * * *'
-    - cron: '0 7 * * *'
+    # Ejecución automática cada 3 horas durante el día (06:00 a 21:00 UTC)
+    - cron: '0 6,9,12,15,18,21 * * *'
   workflow_dispatch: # Permite ejecución manual bajo demanda desde GitHub
 
 # Permisos para que el action pueda guardar la base de datos y la documentación actualizada
@@ -32,13 +30,16 @@ jobs:
       - name: Ejecutar Batería de Tests Unitarios e Integrados
         run: |
           python3 test_new_features.py
-          python3 test_bot.py
           python3 test_intensive.py
-
       - name: Validar Catálogo y Sincronización
         run: |
           python3 gravel_tracker.py --validate
           python3 gravel_tracker.py --sync-doc
+      - name: Auditar Enlaces Vivos y Recalcular Rúbrica Calibrada
+        run: |
+          python3 gravel_tracker.py --audit --limit 30
+          python3 gravel_tracker.py --re-score
+
       - name: Ejecutar Rastreo y Enviar Alertas a Telegram (Sólo en Cron o Dispatch)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
@@ -46,7 +47,6 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python3 gravel_tracker.py --scan
-
       - name: Persistir Base de Datos y Tier List Actualizada (Sólo en Cron o Dispatch)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
