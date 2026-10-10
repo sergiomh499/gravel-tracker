@@ -644,20 +644,6 @@ STORE_DIRECTORY: List[Dict[str, Any]] = [
         "parser": "buycycle"
     },
     {
-        "slug": "tuvalum",
-        "nombre": "Tuvalum Ocasión Certificada",
-        "tipo": "ocasion_certificada",
-        "direccion": "Valencia (Envíos asegurados a Madrid)",
-        "distancia_km": 0.0,
-        "telefono": "96 064 45 42",
-        "whatsapp": "",
-        "marcas": "Orbea, Megamo, Cannondale, Berria, Trek, Canyon",
-        "servicios": "Bicicletas de gravel reacondicionadas con certificación mecánica de taller y garantía de 1 año",
-        "url": "https://tuvalum.com",
-        "scrape_url": "https://tuvalum.com/collections/bicicletas-gravel",
-        "parser": "tuvalum"
-    },
-    {
         "slug": "milanuncios_madrid",
         "nombre": "Milanuncios Ciclismo Madrid",
         "tipo": "segunda_mano",

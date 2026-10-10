@@ -200,25 +200,13 @@ class TestNewFeatures(unittest.TestCase):
         self.assertIsNotNone(prof)
         self.assertEqual(prof["zona"], "Valencia")
 
-    def test_tuvalum_scraper_integration(self):
-        """Verifica la extracción y fallback de bicicletas reacondicionadas en Tuvalum."""
-        from gravel_bot.scrapers.tuvalum import TuvalumScraper
+    def test_defunct_tuvalum_scraper_removed(self):
+        """Verifica que el scraper extinto de Tuvalum fue removido de ACTIVE_SCRAPERS (T077-T080)."""
+        import os
         from gravel_bot.scrapers import get_all_scrapers
-
-        scraper = TuvalumScraper()
-        items = scraper.scrape()
-        self.assertGreater(len(items), 0)
-        first = items[0]
-        self.assertIn("title", first)
-        self.assertIn("price", first)
-        self.assertGreater(first["price"], 400)
-        self.assertIn("url", first)
-        self.assertEqual(first["tienda_slug"], "tuvalum")
-
-        # Verificar que está en la lista de scrapers activos
-        all_active = [s.name for s in get_all_scrapers()]
-        self.assertIn("tuvalum", all_active)
-
+        self.assertFalse(os.path.exists("gravel_bot/scrapers/tuvalum.py"))
+        all_active = [s.store_slug for s in get_all_scrapers()]
+        self.assertNotIn("tuvalum", all_active)
     def test_persistent_wizard_draft(self):
         """Verifica la persistencia de borradores de wizard en SQLite."""
         from gravel_bot.db import save_wizard_draft, get_wizard_draft, clear_wizard_draft
@@ -768,5 +756,206 @@ class TestCatalogAuditAndRankingCalibration(unittest.TestCase):
         self.assertIn("audit_status", sample)
         self.assertIn("c1_frenos", sample)
         self.assertIn("c6_garantia", sample)
+
+class TestCodebaseBloatAndCliParity(unittest.TestCase):
+    """Suite de pruebas para la característica 004: Poda de Sobreingeniería y Paridad CLI."""
+
+    def test_cli_entrypoint_delegation(self):
+        """Verifica que gravel_bot.cli.main() despacha todos los comandos y banderas (T074)."""
+        import io
+        from contextlib import redirect_stdout
+        from gravel_bot.cli import main
+
+        # 1. Ejecución con --presupuesto y --json
+        f = io.StringIO()
+        with redirect_stdout(f):
+            main(["--presupuesto", "1000", "--json"])
+        out = f.getvalue()
+        self.assertIn('"status": "success"', out)
+        self.assertIn('"budget": 1000.0', out)
+
+        # 2. Ejecución con --re-score y --dry-run
+        f = io.StringIO()
+        with redirect_stdout(f):
+            main(["--re-score", "--dry-run"])
+        out = f.getvalue()
+        self.assertIn("RECALCULANDO RÚBRICA CALIBRADA", out)
+
+        # 3. Ejecución con --ficha
+        f = io.StringIO()
+        with redirect_stdout(f):
+            main(["--ficha", "Jakar 30"])
+        out = f.getvalue()
+        self.assertIn("FICHA DETALLADA", out)
+
+class TestGravelBotLegacyCoverage(unittest.TestCase):
+    """Cobertura preservada de la suite legacy original (T081)."""
+
+    def setUp(self):
+        init_db()
+
+    def test_rubric_tier_s_plus(self):
+        """Verifica que una gravel de 1.099 € con GRX 2x10 y frenos hidráulicos en talla S sea Tier S+."""
+        from gravel_bot.evaluator import calcular_rubrica
+        c1, c2, c3, c4, c5, total, nota, tier = calcular_rubrica(
+            disciplina="gravel",
+            tipo_frenos="hidraulico",
+            tipo_transmision="2x10",
+            cuadro="Aluminio 6061",
+            horquilla="Carbono",
+            patilla_udh=0,
+            precio=1099.0,
+            talla_valida=True
+        )
+        self.assertGreaterEqual(total, 90.0)
+        self.assertEqual(tier, "Tier S+")
+        self.assertGreaterEqual(nota, 9.0)
+
+    def test_rubric_tier_c_for_road_bike(self):
+        """Verifica que una bicicleta de carretera o geometría inadecuada sea castigada a Tier C."""
+        from gravel_bot.evaluator import calcular_rubrica
+        c1, c2, c3, c4, c5, total, nota, tier = calcular_rubrica(
+            disciplina="carretera",
+            tipo_frenos="mecanico_doble",
+            tipo_transmision="2x8",
+            cuadro="Aluminio",
+            horquilla="Aluminio",
+            patilla_udh=0,
+            precio=899.0,
+            talla_valida=False
+        )
+        self.assertEqual(tier, "Tier C")
+        self.assertLess(nota, 5.0)
+
+    def test_clean_price(self):
+        """Verifica el limpiador de precios en formatos europeos y estándar."""
+        from gravel_bot.scrapers.base import BaseScraper
+        self.assertEqual(BaseScraper.clean_price("1.299,00 €"), 1299.0)
+        self.assertEqual(BaseScraper.clean_price("1349.10 €"), 1349.1)
+        self.assertEqual(BaseScraper.clean_price("999 €"), 999.0)
+        self.assertEqual(BaseScraper.clean_price("4.549,35 €"), 4549.35)
+
+    def test_spec_detection(self):
+        """Verifica que el extractor heurístico identifique GRX, hidráulicos y talla S."""
+        from gravel_bot.evaluator import detect_bike_specs
+        title = "Bicicleta Megamo Jakar 30 2026 Shimano GRX RX400 2x10v"
+        sizes = ["S", "M", "L"]
+        specs = detect_bike_specs(title=title, price=1199.0, sizes=sizes)
+        self.assertEqual(specs["marca"], "Megamo")
+        self.assertEqual(specs["tipo_frenos"], "hidraulico")
+        self.assertEqual(specs["tipo_transmision"], "2x10")
+        self.assertEqual(specs["tier"], "Tier S+")
+        self.assertIn("S", specs["talla_recomendada_169"])
+
+    def test_alert_deduplication(self):
+        """Verifica que no se dupliquen alertas en la base de datos."""
+        from gravel_bot.db import get_connection, mark_alert_sent, was_alert_sent
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT id FROM bicicletas LIMIT 1")
+        row = c.fetchone()
+        conn.close()
+        if row:
+            bike_id = row["id"]
+            mark_alert_sent(bike_id, 1100.0, "Tier S+", 9.5, "telegram_test")
+            self.assertTrue(was_alert_sent(bike_id, 1100.0))
+            self.assertTrue(was_alert_sent(bike_id, 1200.0))
+
+    def test_telegram_message_formatting(self):
+        """Verifica que el mensaje generado para Telegram sea rico y contenga enlaces y badges."""
+        from gravel_bot.notifier import format_alert_message
+        bike = {
+            "marca": "Orbea",
+            "modelo": "Terra H40 2024",
+            "tier": "Tier S+",
+            "nota": 9.6,
+            "precio_oferta": 1250.0,
+            "precio_pvp": 2099.0,
+            "talla_recomendada_169": "S (51 cm)",
+            "transmision": "Shimano GRX 2x10v",
+            "frenos": "Shimano GRX Hidráulico",
+            "cuadro": "Aluminio Triple Conificado",
+            "tienda_nombre": "Calmera Atocha",
+            "url_oferta": "https://ciclismo.calmera.es"
+        }
+        msg = format_alert_message(bike)
+        self.assertIn("NUEVA GANGA GRAVEL", msg)
+        self.assertIn("Orbea Terra H40 2024", msg)
+        self.assertIn("1250 €", msg)
+        self.assertIn("Ahorras 849 €", msg)
+        self.assertIn("Calmera Atocha", msg)
+
+    def test_dynamic_geometry_sizing_by_brand(self):
+        """Verifica que el tallaje sea dinámico por marca/modelo y no global."""
+        from gravel_bot.geometry_sizing import get_recommended_size_dynamic, evaluate_size_compatibility_dynamic
+        canyon_size = get_recommended_size_dynamic("Canyon", "Grizl", 169)
+        self.assertEqual(canyon_size["talla_recomendada"], "XS")
+        compat, nom, _ = evaluate_size_compatibility_dynamic("Canyon", "Grizl", 169, ["s", "m"])
+        self.assertFalse(compat)
+
+        focus_size = get_recommended_size_dynamic("Focus", "ATLAS", 169)
+        self.assertIn("XS", focus_size["talla_recomendada"])
+
+        trek_size = get_recommended_size_dynamic("Trek", "Checkpoint", 169)
+        self.assertEqual(trek_size["talla_recomendada"], "52 cm")
+
+        conor_size = get_recommended_size_dynamic("Conor", "Kalima", 169)
+        self.assertIn("SM", conor_size["talla_recomendada"])
+
+    def test_multi_user_profile_crud(self):
+        """Verifica la persistencia y actualización de perfiles de usuario en SQLite."""
+        from gravel_bot.db import get_or_create_user, get_user_profile, update_user_profile
+        test_chat_id = 999888777
+        user_id = get_or_create_user(test_chat_id, "test_cyclist")
+        update_user_profile(user_id, estatura_cm=178, presupuesto_max=1800.0, preferencia_transmision="1x")
+        prof = get_user_profile(user_id)
+        self.assertIsNotNone(prof)
+        self.assertEqual(prof["estatura_cm"], 178)
+        self.assertEqual(prof["presupuesto_max"], 1800.0)
+        self.assertEqual(prof["preferencia_transmision"], "1x")
+        self.assertEqual(prof["talla_calculada"], "M")
+
+    def test_bike_record_validator(self):
+        """Verifica la auditoría de campos técnicos y precios coherentes."""
+        from gravel_bot.validator import validate_bike_record
+        bike = {
+            "marca": "Canyon",
+            "modelo": "Grizl 6 AL",
+            "precio_oferta": 1199.0,
+            "precio_pvp": 1499.0,
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x10"
+        }
+        val = validate_bike_record(bike, altura_cm=169)
+        self.assertTrue(val["valid"])
+        self.assertEqual(val["talla_dinamica_calculada"], "XS")
+
+    def test_budget_tolerance_stretch_deal(self):
+        """Verifica que ofertas superiores al presupuesto base entren con holgura si están justificadas."""
+        from gravel_bot.evaluator import calcular_rubrica_personalizada
+        perfil = {
+            "estatura_cm": 169,
+            "presupuesto_max": 1000.0,
+            "holgura_max_pct": 15.0,
+            "preferencia_transmision": "2x",
+            "terreno_asfalto_pct": 50
+        }
+        bike_gran_oferta = {
+            "marca": "Megamo",
+            "modelo": "Jakar 30 2x10",
+            "precio_oferta": 1100.0,
+            "precio_pvp": 1499.0,
+            "tipo_frenos": "hidraulico",
+            "tipo_transmision": "2x10",
+            "cuadro": "Aluminio con horquilla carbono",
+            "talla_recomendada_169": "S (52 cm)",
+            "disciplina": "gravel",
+            "horquilla": "Carbono",
+            "patilla_udh": 0
+        }
+        res = calcular_rubrica_personalizada(bike_gran_oferta, perfil)
+        self.assertTrue(res["holgura_aplicada"])
+        self.assertGreaterEqual(res["c4_precio"], 15.0)
+        self.assertIn(res["tier"], ["Tier S+", "Tier S"])
 if __name__ == "__main__":
     unittest.main()

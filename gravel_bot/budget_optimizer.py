@@ -106,29 +106,35 @@ def is_noise_candidate(model_text: str, brand_text: str, discipline: str, store_
     return False
 
 
-def is_size_compatible(talla_169: str, tallas_disp_str: str, rider_height_cm: int = 169, target_size: Optional[str] = None) -> tuple:
-    """Evalúa la compatibilidad de talla para el ciclista."""
+def is_size_compatible(talla_169: str, tallas_disp_str: str, rider_height_cm: int = 169, target_size: Optional[str] = None,
+                       marca: str = "", modelo: str = "") -> Tuple[bool, str]:
+    """Evalúa la compatibilidad de talla delegando en el motor de geometría y biomecánica."""
+    from gravel_bot.geometry_sizing import evaluate_size_compatibility_dynamic, get_recommended_size_dynamic
+
     talla_169_clean = (talla_169 or "").strip()
     disp_clean = (tallas_disp_str or "").strip()
 
-    # Si se pide una talla explícita
     if target_size:
         tgt = target_size.strip().upper()
         if tgt in talla_169_clean.upper() or (disp_clean and tgt in disp_clean.upper()):
             return True, talla_169_clean or tgt
         return False, "incompatible"
 
-    # Si es para la estatura por defecto ~1.69 m (Talla S / 51-52 cm)
-    if 165 <= rider_height_cm <= 174:
-        if "no compatible" in talla_169_clean.lower():
+    # Evaluar compatibilidad dinámica por marca/modelo si hay tallas registradas
+    if marca and disp_clean:
+        sizes_list = [s.strip() for s in disp_clean.replace(";", ",").split(",") if s.strip()]
+        compat, size_name, _ = evaluate_size_compatibility_dynamic(marca, modelo, rider_height_cm, sizes_list)
+        if not compat and "no compatible" in talla_169_clean.lower():
             return False, "incompatible"
-        return True, talla_169_clean or "S (51-52 cm)"
+        if size_name and size_name != "Verificar":
+            return True, size_name
 
-    # Para otras estaturas, si está marcado incompatible descartamos
-    if "no compatible" in talla_169_clean.lower():
+    if "no compatible" in talla_169_clean.lower() or "incompatible" in talla_169_clean.lower():
         return False, "incompatible"
-    return True, talla_169_clean or "Verificar"
 
+    rec = get_recommended_size_dynamic(marca or "Standard", modelo or "Gravel", rider_height_cm)
+    rec_size = rec.get("talla_recomendada", "S (51-52 cm)")
+    return True, talla_169_clean or rec_size
 
 def classify_channel(store_name: str, store_type: Optional[str] = None) -> str:
     """Clasifica el canal de compra: tienda_fisica, online, ocasion_certificada, particular."""
@@ -162,7 +168,7 @@ def clean_candidate_from_row(row: Any, rider_height_cm: int = 169, target_size: 
     # 2. Filtro de Talla
     talla_169 = row["talla_recomendada_169"] or ""
     tallas_disp = row["tallas_disponibles"] if "tallas_disponibles" in row.keys() else ""
-    compatible, sizing_label = is_size_compatible(talla_169, tallas_disp, rider_height_cm, target_size)
+    compatible, sizing_label = is_size_compatible(talla_169, tallas_disp, rider_height_cm, target_size, marca=brand, modelo=model)
     if not compatible:
         return None
 

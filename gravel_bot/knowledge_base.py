@@ -7,7 +7,7 @@ frenos y estándares de cuadro con scoring ponderado en caliente.
 import json
 import os
 from typing import Dict, Any, Optional, Tuple
-
+from gravel_bot.components_authority import KNOWN_FACTORY_MODEL_SPECS, find_known_model_spec
 COMPONENTS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "components_db.json")
 
 class KnowledgeBase:
@@ -33,74 +33,11 @@ class KnowledgeBase:
                 self._data = {"transmisiones": {}, "frenos": {}, "estandares_cuadro": {}}
         else:
             self._data = {"transmisiones": {}, "frenos": {}, "estandares_cuadro": {}}
-    # Catálogo de especificaciones de fábrica para modelos gravel conocidos del mercado español
-    KNOWN_MODEL_SPECS = {
-        # Megamo
-        "jakar 30": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono Disc", "pvp": 1699.0},
-        "jakar 20": {"dt": "sram_apex_1_1x11", "br": "sram_hidraulico_dot", "udh": 0, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono Disc", "pvp": 1699.0},
-        "west 15": {"dt": "shimano_grx_rx600_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Carbono Toray", "horquilla": "Carbono", "pvp": 2499.0},
-        "west 20": {"dt": "sram_apex_1_1x11", "br": "sram_hidraulico_dot", "udh": 0, "cuadro": "Carbono Toray", "horquilla": "Carbono", "pvp": 2299.0},
-        "silk": {"dt": "shimano_grx_rx820_2x12", "br": "shimano_grx_hidraulico", "udh": 1, "cuadro": "Carbono Toray High Modulus", "horquilla": "Carbono", "pvp": 3499.0},
-        # Conor
-        "kalima grx400": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono", "pvp": 1499.0},
-        "kalima grx610": {"dt": "shimano_grx_rx820_2x12", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono", "pvp": 1699.0},
-        "kalima": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono", "pvp": 1499.0},
-        # Orbea
-        "terra h40": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio Hidroformado OMR", "horquilla": "Carbono", "pvp": 1849.0},
-        "terra h30": {"dt": "shimano_grx_rx600_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio Hidroformado OMR", "horquilla": "Carbono", "pvp": 2099.0},
-        "terra m30": {"dt": "shimano_grx_rx600_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Carbono OMR", "horquilla": "Carbono", "pvp": 2999.0},
-        "terra m20": {"dt": "shimano_grx_rx820_2x12", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Carbono OMR", "horquilla": "Carbono", "pvp": 3699.0},
-        # MMR
-        "x-grip 30": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 1, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono Monocasco", "pvp": 1499.0},
-        "x-grip 10": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 1, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono Monocasco", "pvp": 1799.0},
-        "x-grip 00": {"dt": "sram_apex_xplr_axs_1x12", "br": "sram_hidraulico_dot", "udh": 1, "cuadro": "Aluminio 6061 Hidroformado", "horquilla": "Carbono Monocasco", "pvp": 1999.0},
-        "x-tour": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 1, "cuadro": "Carbono", "horquilla": "Carbono", "pvp": 2799.0},
-        # R-Raymon
-        "territ comp": {"dt": "shimano_cues_u6000_1x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1299.0},
-        "territ pro": {"dt": "shimano_cues_u6000_1x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1499.0},
-        # Kross
-        "esker 6.0": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio Superlite", "horquilla": "Carbono", "pvp": 1799.0},
-        "esker 5.0": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio Superlite", "horquilla": "Carbono", "pvp": 1499.0},
-        "esker 2.0": {"dt": "microshift_sword_2x10", "br": "tektro_mira_mecanico", "udh": 0, "cuadro": "Aluminio Superlite", "horquilla": "Carbono", "pvp": 1199.0},
-        # Scott
-        "speedster gravel 30": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio D.Butted 6061", "horquilla": "Carbono", "pvp": 1599.0},
-        "speedster gravel 20": {"dt": "shimano_grx_rx600_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio D.Butted 6061", "horquilla": "Carbono", "pvp": 1799.0},
-        "speedster gravel 40": {"dt": "shimano_grx_rx400_2x10", "br": "tektro_mira_mecanico", "udh": 0, "cuadro": "Aluminio D.Butted 6061", "horquilla": "Carbono", "pvp": 1399.0},
-        "addict gravel 40": {"dt": "shimano_grx_rx820_2x12", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Carbono HMF", "horquilla": "Carbono HMF", "pvp": 2799.0},
-        "addict gravel 30": {"dt": "sram_apex_xplr_axs_1x12", "br": "sram_hidraulico_dot", "udh": 0, "cuadro": "Carbono HMF", "horquilla": "Carbono HMF", "pvp": 3199.0},
-        # Canyon
-        "grizl 6": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio", "horquilla": "Carbono", "pvp": 1499.0},
-        "grizl 7": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio", "horquilla": "Carbono", "pvp": 1799.0},
-        "grail 7": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio", "horquilla": "Carbono", "pvp": 1799.0},
-        # Cube
-        "nuroad race": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Superlite", "horquilla": "Carbono", "pvp": 1699.0},
-        "nuroad ex": {"dt": "shimano_grx_rx810_2x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061 Superlite", "horquilla": "Carbono", "pvp": 1549.0},
-        "nuroad pro": {"dt": "shimano_grx_rx400_2x10", "br": "tektro_mira_mecanico", "udh": 0, "cuadro": "Aluminio 6061 Superlite", "horquilla": "Carbono", "pvp": 1199.0},
-        "nuroad one": {"dt": "microshift_sword_2x10", "br": "tektro_mira_mecanico", "udh": 0, "cuadro": "Aluminio 6061 Superlite", "horquilla": "Carbono", "pvp": 999.0},
-        # Focus
-        "atlas 6": {"dt": "sram_apex_1_1x11", "br": "sram_hidraulico_dot", "udh": 0, "cuadro": "Aluminio", "horquilla": "Carbono", "pvp": 1699.0},
-        # Ghost
-        "asket": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio", "horquilla": "Carbono", "pvp": 1599.0},
-        # KTM
-        "x-strada 30": {"dt": "sram_apex_1_1x11", "br": "tektro_mira_mecanico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1199.0},
-        "x-strada 20": {"dt": "shimano_grx_rx400_2x10", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1699.0},
-        # Decathlon
-        "grvl af": {"dt": "shimano_grx_rx820_2x12", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio AF", "horquilla": "Carbono", "pvp": 1399.0},
-        "grvl 520": {"dt": "sram_apex_1_1x11", "br": "trp_hyrd_semihidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1099.0},
-        "rc 520": {"dt": "shimano_grx_rx600_2x11", "br": "trp_hyrd_semihidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 899.0},
-        "grvl 120": {"dt": "shimano_cues_u6000_1x10", "br": "promax_mecanico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 699.0},
-        # Ciclos Corredor
-        "gr-cinco": {"dt": "shimano_cues_u6000_1x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1999.0},
-        "gr cinco": {"dt": "shimano_cues_u6000_1x11", "br": "shimano_grx_hidraulico", "udh": 0, "cuadro": "Aluminio 6061", "horquilla": "Carbono", "pvp": 1999.0},
-    }
+    KNOWN_MODEL_SPECS = KNOWN_FACTORY_MODEL_SPECS
 
     def find_known_model_spec(self, text: str) -> Optional[Dict[str, Any]]:
         """Busca si el texto corresponde a un modelo canónico conocido."""
-        t_clean = text.lower()
-        for m_key, spec in self.KNOWN_MODEL_SPECS.items():
-            if m_key in t_clean:
-                return spec
-        return None
+        return find_known_model_spec(text)
 
     def match_drivetrain(self, text: str) -> Optional[Dict[str, Any]]:
         """Identifica la transmisión técnica a partir del texto del anuncio o título."""

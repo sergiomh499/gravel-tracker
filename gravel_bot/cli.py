@@ -5,6 +5,7 @@ gravel_bot.cli - Interfaz de Línea de Comandos para el Bot de Gravel
 import sys
 import time
 import argparse
+from typing import Optional, List
 from gravel_bot.config import SCAN_INTERVAL_SECONDS
 from gravel_bot.db import init_db, get_all_bikes, get_deals, get_or_create_store, upsert_bike, record_price
 from gravel_bot.evaluator import detect_bike_specs, calcular_rubrica
@@ -132,6 +133,22 @@ def cmd_rescore(args):
         print("\n✅ Base de datos actualizada con puntuaciones calibradas C1..C6 y factor garantía.")
     print("="*80 + "\n")
 
+def cmd_ficha(args):
+    init_db()
+    from gravel_bot.bike_inspector import format_detailed_bike_card
+    modelo = getattr(args, "modelo", "Jakar 30") or "Jakar 30"
+    print(format_detailed_bike_card(modelo))
+
+def cmd_vs(args):
+    init_db()
+    from gravel_bot.bike_inspector import format_bike_comparison_message
+    print(format_bike_comparison_message(args.b1, args.b2))
+
+def cmd_gear(args):
+    from gravel_bot.gear_calculator import format_gear_simulation_message
+    sub = getattr(args, "tipo", "2x") or "2x"
+    print(format_gear_simulation_message(sub))
+
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
     deep_scan = getattr(args, "deep", False)
@@ -156,8 +173,7 @@ def cmd_daemon(args):
             time.sleep(interval)
     except KeyboardInterrupt:
         print("\n🛑 Monitor en segundo plano detenido por el usuario.")
-
-def main():
+def main(args_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser(description="Gravel Bot - Rastreador y Notificador de Chollos")
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
 
@@ -205,7 +221,52 @@ def main():
     # re-score
     parser_rescore = subparsers.add_parser("re-score", aliases=["rescore"], help="Recalcular rúbrica calibrada C1..C6 con factor garantía")
     parser_rescore.add_argument("--dry-run", action="store_true", help="Simular sin escribir en la base de datos")
-    args = parser.parse_args()
+
+    # ficha / info / inspect
+    parser_ficha = subparsers.add_parser("ficha", aliases=["info", "detalle"], help="Mostrar ficha técnica detallada")
+    parser_ficha.add_argument("modelo", type=str, nargs="?", default="Jakar 30", help="Modelo de bicicleta")
+
+    # vs / compare
+    parser_vs = subparsers.add_parser("vs", aliases=["compare"], help="Comparar dos bicicletas 1v1")
+    parser_vs.add_argument("b1", type=str, help="Primera bicicleta")
+    parser_vs.add_argument("b2", type=str, help="Segunda bicicleta")
+
+    # desarrollo / cadencia
+    parser_gear = subparsers.add_parser("desarrollo", aliases=["cadencia"], help="Simular cinemática de desarrollo")
+    parser_gear.add_argument("tipo", type=str, nargs="?", default="2x", help="Tipo de transmisión: 1x o 2x")
+    raw_args = list(sys.argv[1:] if args_list is None else args_list)
+    if not raw_args:
+        cmd_list(argparse.Namespace(tier=None))
+        cmd_deals(argparse.Namespace(min_discount=15.0))
+        return
+
+    cmd_map = {
+        "--scan": "scan",
+        "--list": "list",
+        "--deals": "deals",
+        "--presupuesto": "presupuesto",
+        "--budget": "budget",
+        "--recomendar": "recomendar",
+        "--web": "web",
+        "--dashboard": "dashboard",
+        "--ui": "ui",
+        "--audit": "audit",
+        "--re-score": "re-score",
+        "--rescore": "rescore",
+        "--ficha": "ficha",
+        "--info": "info",
+        "--detalle": "detalle",
+        "--vs": "vs",
+        "--compare": "compare",
+        "--desarrollo": "desarrollo",
+        "--cadencia": "cadencia",
+        "--daemon": "daemon",
+        "--test-telegram": "test-telegram",
+    }
+    if raw_args and raw_args[0] in cmd_map:
+        raw_args[0] = cmd_map[raw_args[0]]
+
+    args = parser.parse_args(raw_args)
 
     if args.command == "scan":
         cmd_scan(args)
@@ -225,9 +286,13 @@ def main():
         cmd_audit(args)
     elif args.command in ["re-score", "rescore"]:
         cmd_rescore(args)
+    elif args.command in ["ficha", "info", "detalle"]:
+        cmd_ficha(args)
+    elif args.command in ["vs", "compare"]:
+        cmd_vs(args)
+    elif args.command in ["desarrollo", "cadencia"]:
+        cmd_gear(args)
     else:
-        # Default: mostrar listado
         cmd_list(args)
-
 if __name__ == "__main__":
     main()
