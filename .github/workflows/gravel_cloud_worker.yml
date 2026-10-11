@@ -1,0 +1,53 @@
+name: Gravel Cloud Autonomous Worker
+
+on:
+  schedule:
+    # Rastreo cada 3 horas (06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC)
+    - cron: '0 6,9,12,15,18,21 * * *'
+  workflow_dispatch: # Ejecución manual bajo demanda desde GitHub o CLI
+
+permissions:
+  contents: write
+
+jobs:
+  cloud-crawl-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Batería de Tests Unitarios
+        run: |
+          python3 -m unittest discover -s . -p "test_*.py"
+
+      - name: Auditoría de Enlaces y Saneamiento de Catálogo
+        run: |
+          python3 gravel_tracker.py --audit --limit 40
+          python3 gravel_tracker.py --re-score
+
+      - name: Rastreo de Tiendas y Envío de Alertas a Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python3 gravel_tracker.py --scan
+
+      - name: Persistir Base de Datos y Catálogo Actualizado en GitHub
+        run: |
+          git config user.name "Gravel Cloud Worker"
+          git config user.email "cloud-worker@gravel.local"
+          git pull --rebase origin main || (git checkout --theirs gravel_madrid.db && git add gravel_madrid.db && git rebase --continue) || true
+          git add gravel_madrid.db directorio_bicicletas.md catalog_snapshot.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-sync cloud: catálogo y precios actualizados [skip ci]"
+            git push origin main || (git pull --rebase origin main && git push origin main) || true
+          else
+            echo "Sin variaciones en el catálogo tras la ejecución."
+          fi

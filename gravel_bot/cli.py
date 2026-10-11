@@ -149,6 +149,57 @@ def cmd_gear(args):
     sub = getattr(args, "tipo", "2x") or "2x"
     print(format_gear_simulation_message(sub))
 
+def cmd_cloud_sync(args):
+    """Sincroniza los secretos de .env en GitHub Actions Secrets mediante gh CLI y verifica el worker."""
+    import subprocess
+    from gravel_bot.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+
+    print("\n" + "="*80)
+    print("☁️ SINCRONIZACIÓN DE SECRETOS Y CONFIGURACIÓN CLOUD (GitHub Actions)")
+    print("="*80)
+
+    token = TELEGRAM_BOT_TOKEN
+    chat_id = TELEGRAM_CHAT_ID
+
+    if not token or not chat_id:
+        print("❌ Error: TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configurados en .env o entorno local.")
+        return
+
+    masked_token = token[:8] + "..." + token[-4:] if len(token) > 12 else "***"
+    print(" * Leyendo credenciales locales:")
+    print(f"   - TELEGRAM_BOT_TOKEN: {masked_token}")
+    print(f"   - TELEGRAM_CHAT_ID:   {chat_id}")
+
+    repo_name = "sergiomh499/gravel-tracker"
+    print(f"\n * Sincronizando secretos en GitHub Secrets ({repo_name})...")
+
+    cmd1 = ["env", "-u", "GITHUB_TOKEN", "gh", "secret", "set", "TELEGRAM_BOT_TOKEN", "--repo", repo_name, "--body", token]
+    res1 = subprocess.run(cmd1, capture_output=True, text=True)
+    if res1.returncode == 0:
+        print("   ✅ Secret TELEGRAM_BOT_TOKEN sincronizado en GitHub.")
+    else:
+        print(f"   ❌ Error sincronizando TELEGRAM_BOT_TOKEN: {res1.stderr.strip()}")
+
+    cmd2 = ["env", "-u", "GITHUB_TOKEN", "gh", "secret", "set", "TELEGRAM_CHAT_ID", "--repo", repo_name, "--body", str(chat_id)]
+    res2 = subprocess.run(cmd2, capture_output=True, text=True)
+    if res2.returncode == 0:
+        print("   ✅ Secret TELEGRAM_CHAT_ID sincronizado en GitHub.")
+    else:
+        print(f"   ❌ Error sincronizando TELEGRAM_CHAT_ID: {res2.stderr.strip()}")
+
+    if getattr(args, "trigger", False):
+        print("\n * Disparando ejecución de prueba en GitHub Actions Cloud...")
+        cmd_run = ["env", "-u", "GITHUB_TOKEN", "gh", "workflow", "run", "gravel_cloud_worker.yml", "--repo", repo_name]
+        res_run = subprocess.run(cmd_run, capture_output=True, text=True)
+        if res_run.returncode == 0:
+            print("   🚀 Workflow disparado en GitHub Actions. Ejecutándose en la nube 24/7.")
+        else:
+            print(f"   ⚠️ Aviso al disparar: {res_run.stderr.strip()}")
+
+    print("\n✅ Configuración cloud completada: el servidor gratuito de GitHub se encargará")
+    print("   de rastrear y enviar alertas 24/7 sin que este ordenador deba estar encendido.")
+    print("="*80 + "\n")
+
 def cmd_scan(args):
     send_alerts = not args.no_alert if hasattr(args, "no_alert") else True
     deep_scan = getattr(args, "deep", False)
@@ -234,6 +285,10 @@ def main(args_list: Optional[List[str]] = None):
     # desarrollo / cadencia
     parser_gear = subparsers.add_parser("desarrollo", aliases=["cadencia"], help="Simular cinemática de desarrollo")
     parser_gear.add_argument("tipo", type=str, nargs="?", default="2x", help="Tipo de transmisión: 1x o 2x")
+
+    # cloud-sync
+    parser_cloud = subparsers.add_parser("cloud-sync", aliases=["sync-cloud", "cloud"], help="Sincronizar secretos en GitHub Actions para ejecución 24/7 en la nube")
+    parser_cloud.add_argument("--trigger", "-t", action="store_true", help="Disparar ejecución de prueba inmediata en GitHub Cloud")
     raw_args = list(sys.argv[1:] if args_list is None else args_list)
     if not raw_args:
         cmd_list(argparse.Namespace(tier=None))
@@ -262,6 +317,9 @@ def main(args_list: Optional[List[str]] = None):
         "--cadencia": "cadencia",
         "--daemon": "daemon",
         "--test-telegram": "test-telegram",
+        "--cloud-sync": "cloud-sync",
+        "--sync-cloud": "cloud-sync",
+        "--cloud": "cloud-sync",
     }
     if raw_args and raw_args[0] in cmd_map:
         raw_args[0] = cmd_map[raw_args[0]]
@@ -292,6 +350,8 @@ def main(args_list: Optional[List[str]] = None):
         cmd_vs(args)
     elif args.command in ["desarrollo", "cadencia"]:
         cmd_gear(args)
+    elif args.command in ["cloud-sync", "sync-cloud", "cloud"]:
+        cmd_cloud_sync(args)
     else:
         cmd_list(args)
 if __name__ == "__main__":
