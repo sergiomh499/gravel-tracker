@@ -67,6 +67,7 @@ class RecommendationPodio:
     smart_stretch: Optional[CleanCandidateBike] = None
     stretch_reason: Optional[str] = None
     budget_saver: Optional[CleanCandidateBike] = None
+    best_used_deal: Optional[CleanCandidateBike] = None
     status: str = "success"  # "success", "no_exact_match", "budget_too_low"
 
 
@@ -82,6 +83,11 @@ def is_noise_candidate(model_text: str, brand_text: str, discipline: str, store_
     full_text = f"{brand_text} {model_text}".lower()
     store_lower = (store_name or "").lower()
     disc_lower = (discipline or "").lower()
+
+    # 0. Marca desconocida o vacía: no identificable => ruido (aplicado en un único punto compartido por CLI/Telegram/Web)
+    brand_clean = (brand_text or "").strip().lower()
+    if brand_clean in ("desconocida", "desconocido", "unknown", ""):
+        return True
 
     # 1. Tienda cerrada o en liquidación
     if any(k in store_lower for k in ["cerrada", "liquidación", "liquidacion", "tuvalum"]):
@@ -120,11 +126,14 @@ def is_size_compatible(talla_169: str, tallas_disp_str: str, rider_height_cm: in
             return True, talla_169_clean or tgt
         return False, "incompatible"
 
-    # Evaluar compatibilidad dinámica por marca/modelo si hay tallas registradas
-    if marca and disp_clean:
-        sizes_list = [s.strip() for s in disp_clean.replace(";", ",").split(",") if s.strip()]
+    # Placeholder tipo "Consultar tienda" no es una talla: se descarta antes de evaluar
+    size_token_re = re.compile(r"^(xxs|xs|s|m|l|xl|xxl)(\s*\(.*\))?$|^\d{2}(-\d{2})?(\s*cm)?(\s*\(.*\))?$", re.IGNORECASE)
+    sizes_list = [s.strip() for s in disp_clean.replace(";", ",").split(",") if s.strip() and size_token_re.match(s.strip())]
+
+    # Evaluar compatibilidad dinámica por marca/modelo si hay tallas registradas reales
+    if marca and sizes_list:
         compat, size_name, _ = evaluate_size_compatibility_dynamic(marca, modelo, rider_height_cm, sizes_list)
-        if not compat and "no compatible" in talla_169_clean.lower():
+        if not compat:
             return False, "incompatible"
         if size_name and size_name != "Verificar":
             return True, size_name
@@ -135,6 +144,34 @@ def is_size_compatible(talla_169: str, tallas_disp_str: str, rider_height_cm: in
     rec = get_recommended_size_dynamic(marca or "Standard", modelo or "Gravel", rider_height_cm)
     rec_size = rec.get("talla_recomendada", "S (51-52 cm)")
     return True, talla_169_clean or rec_size
+
+_CHANNEL_LABEL = {
+    "tienda_fisica": "Tienda física",
+    "tienda_online": "Tienda online",
+    "ocasion_certificada": "Ocasión certificada",
+    "particular": "Particular",
+}
+
+def _frenos_label(has_hydraulic_brakes: bool) -> str:
+    """Etiqueta canónica de frenos, idéntica en CLI, Telegram y Web (FR-05)."""
+    return "Frenos Hidráulicos" if has_hydraulic_brakes else "Frenos Mecánicos/Semihidráulicos"
+
+
+def _horquillas_label(has_carbon_fork: bool) -> str:
+    return "Horquilla Carbono" if has_carbon_fork else "Horquilla Aluminio"
+
+
+def _channel_suffix(store_name: str, channel: str) -> str:
+    """Calificador de canal mostrado una sola vez, con nomenclatura correcta.
+
+    Evita duplicar el calificador cuando el nombre de la tienda ya lo indica
+    (ej. 'Wallapop (Particulares Madrid 25km)').
+    """
+    label = _CHANNEL_LABEL.get(channel, channel.replace('_', ' ').capitalize())
+    if channel == "particular" and "particular" in (store_name or "").lower():
+        return ""
+    return f" ({label})"
+
 
 def classify_channel(store_name: str, store_type: Optional[str] = None) -> str:
     """Clasifica el canal de compra: tienda_fisica, online, ocasion_certificada, particular."""
@@ -151,6 +188,18 @@ def classify_channel(store_name: str, store_type: Optional[str] = None) -> str:
     if any(k in st_name for k in physical_indicators):
         return "tienda_fisica"
     return "tienda_online"
+
+
+def _transmision_drivetrain(row: Any) -> str:
+    """Concatena transmisión + tipo sin duplicar: si el tipo ya aparece (dentro o fuera de paréntesis) no se repite."""
+    trans = (row["transmision"] or "").strip()
+    tipo = (row["tipo_transmision"] or "").strip()
+    if not tipo:
+        return trans or "Transmisión estándar"
+    base = re.sub(rf"\s*\({re.escape(tipo)}\)\s*$", "", trans)
+    if tipo in base:
+        return base
+    return f"{base} ({tipo})".strip() or "Transmisión estándar"
 
 
 def clean_candidate_from_row(row: Any, rider_height_cm: int = 169, target_size: Optional[str] = None) -> Optional[CleanCandidateBike]:
@@ -201,7 +250,7 @@ def clean_candidate_from_row(row: Any, rider_height_cm: int = 169, target_size: 
         discipline=disc,
         frame_material=row["cuadro"] or "Aluminio",
         fork_material=fork,
-        drivetrain=(row["transmision"] or "") + " " + (row["tipo_transmision"] or ""),
+        drivetrain=_transmision_drivetrain(row),
         brake_type=row["tipo_frenos"] or "mecanico",
         has_hydraulic_brakes=has_hydraulic,
         has_carbon_fork=has_carbon_fork,
@@ -254,9 +303,15 @@ def optimize_for_budget(
                 continue
             clean_candidates.append(cand)
 
+    # FR-08: el podio ejecutivo solo admite canales con garantía de tienda;
+    # particular/segunda mano se presenta en el bloque separado ♻️ Ocasión a destacar.
+    new_channel_pool = [c for c in clean_candidates if c.channel_type != "particular"]
+    used_channel_pool = [c for c in clean_candidates if c.channel_type == "particular"]
+
     # Dividir entre presupuesto estricto y stretch
-    in_budget = [c for c in clean_candidates if c.price <= budget]
-    stretch_pool = [c for c in clean_candidates if budget < c.price <= max_stretch_price and (c.price - budget) <= 150.0]
+    in_budget = [c for c in new_channel_pool if c.price <= budget]
+    stretch_pool = [c for c in new_channel_pool if budget < c.price <= max_stretch_price and (c.price - budget) <= 150.0]
+    used_in_budget = [c for c in used_channel_pool if c.price <= budget]
 
     podio = RecommendationPodio(
         query=query,
@@ -264,6 +319,8 @@ def optimize_for_budget(
         valid_candidates_count=len(in_budget),
         status="success" if in_budget else ("no_exact_match" if stretch_pool else "budget_too_low")
     )
+    if used_in_budget:
+        podio.best_used_deal = sorted(used_in_budget, key=lambda x: (x.rubric_score, x.vfm_index), reverse=True)[0]
 
     if not in_budget:
         if stretch_pool:
@@ -336,7 +393,8 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
             "top_bargain": podio.top_bargain.__dict__ if podio.top_bargain else None,
             "smart_stretch": podio.smart_stretch.__dict__ if podio.smart_stretch else None,
             "stretch_reason": podio.stretch_reason,
-            "budget_saver": podio.budget_saver.__dict__ if podio.budget_saver else None
+            "budget_saver": podio.budget_saver.__dict__ if podio.budget_saver else None,
+            "best_used_deal": podio.best_used_deal.__dict__ if podio.best_used_deal else None
         }
         return json.dumps(data, indent=2, ensure_ascii=False)
 
@@ -350,10 +408,26 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
     if not podio.best_value:
         lines.append(f"⚠️ No se encontraron bicicletas gravel completas disponibles estrictamente por debajo de {podio.query.budget_ceiling:.0f} €.")
         if podio.smart_stretch:
+            ss = podio.smart_stretch
             lines.append(f"\n🚀 OPCIÓN MÁS CERCANA:")
-            lines.append(f"   • Modelo:     {podio.smart_stretch.brand} {podio.smart_stretch.model}")
-            lines.append(f"   • Precio:     {podio.smart_stretch.price:.0f} € ({podio.stretch_reason})")
-            lines.append(f"   • Enlace:     {podio.smart_stretch.product_url}")
+            lines.append(f"   • Modelo:     {ss.brand} {ss.model}")
+            lines.append(f"   • Precio:     {ss.price:.0f} € ({podio.stretch_reason})")
+            frenos_ss = _frenos_label(ss.has_hydraulic_brakes)
+            lines.append(f"   • Componentes: {ss.drivetrain} | {frenos_ss}")
+            lines.append(f"   • Talla:      {ss.size_compatibility}")
+            lines.append(f"   • Tienda:     {ss.store_name}{_channel_suffix(ss.store_name, ss.channel_type)}")
+            lines.append(f"   • Enlace:     {ss.product_url}")
+        if podio.best_used_deal:
+            lines.append("")
+            lines.append("♻️ OCASIÓN A DESTACAR — segunda mano / particular ⚠️ SIN garantía de tienda")
+            ud = podio.best_used_deal
+            lines.append(f"   • Modelo:     {ud.brand} {ud.model}")
+            lines.append(f"   • Precio:     {ud.price:.0f} €")
+            lines.append(f"   • Componentes: {ud.drivetrain} | {_frenos_label(ud.has_hydraulic_brakes)}")
+            lines.append(f"   • Talla:      {ud.size_compatibility}")
+            lines.append(f"   • Tienda:     {ud.store_name}{_channel_suffix(ud.store_name, ud.channel_type)}")
+            lines.append(f"   • Enlace:     {ud.product_url}")
+            lines.append(f"   • Veredicto:  {ud.rubric_tier} (Nota {ud.rubric_nota:.1f}/10)")
         lines.append("=" * 110)
         return "\n".join(lines)
 
@@ -363,11 +437,11 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
     lines.append(f"   • Modelo:     {bv.brand} {bv.model}")
     desc_str = f" (PVP: {bv.pvp:.0f} € | Descuento: -{bv.discount_pct:.0f}%)" if bv.discount_pct > 0 else ""
     lines.append(f"   • Precio:     {bv.price:.0f} €{desc_str}")
-    frenos_desc = "Frenos Hidráulicos" if bv.has_hydraulic_brakes else "Frenos Mecánicos/Semihidráulicos"
-    horq_desc = "Horquilla Carbono" if bv.has_carbon_fork else "Horquilla Aluminio"
+    frenos_desc = _frenos_label(bv.has_hydraulic_brakes)
+    horq_desc = _horquillas_label(bv.has_carbon_fork)
     lines.append(f"   • Componentes: {bv.drivetrain} | {frenos_desc} | {horq_desc}")
     lines.append(f"   • Talla:      {bv.size_compatibility}")
-    lines.append(f"   • Tienda:     {bv.store_name} ({bv.channel_type.replace('_', ' ').capitalize()})")
+    lines.append(f"   • Tienda:     {bv.store_name}{_channel_suffix(bv.store_name, bv.channel_type)}")
     lines.append(f"   • Enlace:     {bv.product_url}")
     lines.append(f"   • Veredicto:  {bv.rubric_tier} (Nota {bv.rubric_nota:.1f}/10 | Eficiencia VfM: {bv.vfm_index:.1f} pts/k€)")
     lines.append("")
@@ -379,9 +453,11 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
         lines.append(f"   • Modelo:     {tb.brand} {tb.model}")
         tb_desc = f" (PVP: {tb.pvp:.0f} € | Ahorro: -{tb.discount_pct:.0f}%)" if tb.discount_pct > 0 else f" (Ahorras {podio.query.budget_ceiling - tb.price:.0f} € de tu tope)"
         lines.append(f"   • Precio:     {tb.price:.0f} €{tb_desc}")
-        lines.append(f"   • Componentes: {tb.drivetrain} | {tb.brake_type}")
+        frenos_tb = _frenos_label(tb.has_hydraulic_brakes)
+        horq_tb = _horquillas_label(tb.has_carbon_fork)
+        lines.append(f"   • Componentes: {tb.drivetrain} | {frenos_tb} | {horq_tb}")
         lines.append(f"   • Talla:      {tb.size_compatibility}")
-        lines.append(f"   • Tienda:     {tb.store_name} ({tb.channel_type.replace('_', ' ').capitalize()})")
+        lines.append(f"   • Tienda:     {tb.store_name}{_channel_suffix(tb.store_name, tb.channel_type)}")
         lines.append(f"   • Enlace:     {tb.product_url}")
         lines.append(f"   • Veredicto:  {tb.rubric_tier} (Nota {tb.rubric_nota:.1f}/10)")
         lines.append("")
@@ -393,7 +469,10 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
         lines.append(f"   • Modelo:     {ss.brand} {ss.model}")
         lines.append(f"   • Precio:     {ss.price:.0f} €")
         lines.append(f"   • Salto Clave: {podio.stretch_reason}")
-        lines.append(f"   • Tienda:     {ss.store_name} ({ss.channel_type.replace('_', ' ').capitalize()})")
+        frenos_ss = _frenos_label(ss.has_hydraulic_brakes)
+        lines.append(f"   • Componentes: {ss.drivetrain} | {frenos_ss}")
+        lines.append(f"   • Talla:      {ss.size_compatibility}")
+        lines.append(f"   • Tienda:     {ss.store_name}{_channel_suffix(ss.store_name, ss.channel_type)}")
         lines.append(f"   • Enlace:     {ss.product_url}")
         lines.append("")
 
@@ -403,6 +482,21 @@ def format_budget_recommendation_card(podio: RecommendationPodio, format: str = 
         lines.append(f"💡 OPCIÓN DE AHORRO INTELIGENTE:")
         lines.append(f"   • Modelo:     {bs.brand} {bs.model} por {bs.price:.0f} € (Ahorras {podio.query.budget_ceiling - bs.price:.0f} € manteniendo nivel {bs.rubric_tier})")
         lines.append(f"   • Enlace:     {bs.product_url}")
+        lines.append("")
+
+    # BLOQUE SEPARADO ♻️ (FR-08): segunda mano/particulares nunca compiten con nuevas
+    if podio.best_used_deal:
+        ud = podio.best_used_deal
+        lines.append("♻️ OCASIÓN A DESTACAR — segunda mano / particular ⚠️ SIN garantía de tienda")
+        lines.append(f"   • Modelo:     {ud.brand} {ud.model}")
+        lines.append(f"   • Precio:     {ud.price:.0f} €")
+        frenos_ud = _frenos_label(ud.has_hydraulic_brakes)
+        horq_ud = _horquillas_label(ud.has_carbon_fork)
+        lines.append(f"   • Componentes: {ud.drivetrain} | {frenos_ud} | {horq_ud}")
+        lines.append(f"   • Talla:      {ud.size_compatibility}")
+        lines.append(f"   • Tienda:     {ud.store_name}{_channel_suffix(ud.store_name, ud.channel_type)}")
+        lines.append(f"   • Enlace:     {ud.product_url}")
+        lines.append(f"   • Veredicto:  {ud.rubric_tier} (Nota {ud.rubric_nota:.1f}/10)")
         lines.append("")
 
     lines.append("=" * 110)
@@ -424,8 +518,21 @@ def format_budget_podio_html(podio: RecommendationPodio) -> str:
             lines.append(f"\n🚀 <b>Opción viable más cercana:</b>")
             lines.append(f"🚲 <b>{ss.brand} {ss.model}</b> — <b>{ss.price:.0f} €</b>")
             lines.append(f"💡 <i>{podio.stretch_reason}</i>")
+            lines.append(f"⚙️ {ss.drivetrain} • {_frenos_label(ss.has_hydraulic_brakes)}")
+            lines.append(f"📏 Talla {ss.size_compatibility}")
+            lines.append(f"🏪 {ss.store_name}{_channel_suffix(ss.store_name, ss.channel_type)}")
             if ss.product_url:
                 lines.append(f"🔗 <a href='{ss.product_url}'>Ver en {ss.store_name}</a>")
+        if podio.best_used_deal:
+            ud = podio.best_used_deal
+            lines.append("")
+            lines.append("♻️ <b>OCASIÓN A DESTACAR</b> <i>(segunda mano / particular — ⚠️ SIN garantía de tienda)</i>")
+            lines.append(f"🚲 <b>{ud.brand} {ud.model}</b> — <b>{ud.price:.0f} €</b>")
+            lines.append(f"⚙️ {ud.drivetrain} • {_frenos_label(ud.has_hydraulic_brakes)}")
+            lines.append(f"📏 Talla {ud.size_compatibility}")
+            lines.append(f"🏪 {ud.store_name}{_channel_suffix(ud.store_name, ud.channel_type)}")
+            if ud.product_url:
+                lines.append(f"🔗 <a href='{ud.product_url}'>Ver Oferta del Particular</a>")
         return "\n".join(lines)
 
     bv = podio.best_value
@@ -433,11 +540,11 @@ def format_budget_podio_html(podio: RecommendationPodio) -> str:
     lines.append(f"🚲 <b>{bv.brand} {bv.model}</b>")
     desc_str = f" (<s>{bv.pvp:.0f} €</s> • -{bv.discount_pct:.0f}%)" if bv.discount_pct > 0 else ""
     lines.append(f"💰 <b>{bv.price:.0f} €</b>{desc_str}")
-    frenos = "Frenos Hidráulicos" if bv.has_hydraulic_brakes else "Frenos Mecánicos/Doble Pistón"
-    horq = "Horquilla Carbono" if bv.has_carbon_fork else "Horquilla Aluminio"
+    frenos = _frenos_label(bv.has_hydraulic_brakes)
+    horq = _horquillas_label(bv.has_carbon_fork)
     lines.append(f"⚙️ {bv.drivetrain} • {frenos} • {horq}")
     lines.append(f"📏 Talla {bv.size_compatibility}")
-    lines.append(f"🏪 {bv.store_name} ({bv.channel_type.replace('_', ' ').capitalize()})")
+    lines.append(f"🏪 {bv.store_name}{_channel_suffix(bv.store_name, bv.channel_type)}")
     lines.append(f"⭐ Nota: <b>{bv.rubric_nota:.1f}/10 ({bv.rubric_tier})</b>")
     if bv.product_url:
         lines.append(f"🔗 <a href='{bv.product_url}'>Ver y Comprar en Tienda</a>")
@@ -449,9 +556,11 @@ def format_budget_podio_html(podio: RecommendationPodio) -> str:
         lines.append(f"🚲 <b>{tb.brand} {tb.model}</b>")
         tb_desc = f" (<s>{tb.pvp:.0f} €</s> • -{tb.discount_pct:.0f}%)" if tb.discount_pct > 0 else f" (Ahorras {b - tb.price:.0f} €)"
         lines.append(f"💰 <b>{tb.price:.0f} €</b>{tb_desc}")
-        lines.append(f"⚙️ {tb.drivetrain}")
+        frenos_tb = _frenos_label(tb.has_hydraulic_brakes)
+        horq_tb = _horquillas_label(tb.has_carbon_fork)
+        lines.append(f"⚙️ {tb.drivetrain} • {frenos_tb} • {horq_tb}")
         lines.append(f"📏 Talla {tb.size_compatibility}")
-        lines.append(f"🏪 {tb.store_name}")
+        lines.append(f"🏪 {tb.store_name}{_channel_suffix(tb.store_name, tb.channel_type)}")
         lines.append(f"⭐ Nota: <b>{tb.rubric_nota:.1f}/10 ({tb.rubric_tier})</b>")
         if tb.product_url:
             lines.append(f"🔗 <a href='{tb.product_url}'>Ver y Comprar en Tienda</a>")
@@ -463,7 +572,9 @@ def format_budget_podio_html(podio: RecommendationPodio) -> str:
         lines.append(f"🚀 <b>3. SMART STRETCH (+{diff:.0f} € que merecen la pena)</b>")
         lines.append(f"🚲 <b>{ss.brand} {ss.model}</b> — <b>{ss.price:.0f} €</b>")
         lines.append(f"💡 <i>{podio.stretch_reason}</i>")
-        lines.append(f"🏪 {ss.store_name}")
+        lines.append(f"⚙️ {ss.drivetrain} • {_frenos_label(ss.has_hydraulic_brakes)}")
+        lines.append(f"📏 Talla {ss.size_compatibility}")
+        lines.append(f"🏪 {ss.store_name}{_channel_suffix(ss.store_name, ss.channel_type)}")
         if ss.product_url:
             lines.append(f"🔗 <a href='{ss.product_url}'>Ver y Comprar en Tienda</a>")
         lines.append("")
@@ -474,5 +585,19 @@ def format_budget_podio_html(podio: RecommendationPodio) -> str:
         lines.append(f"🚲 <b>{bs.brand} {bs.model}</b> por <b>{bs.price:.0f} €</b> (Ahorras {b - bs.price:.0f} € manteniendo {bs.rubric_tier})")
         if bs.product_url:
             lines.append(f"🔗 <a href='{bs.product_url}'>Ver Oferta</a>")
+
+    # BLOQUE SEPARADO ♻️ (FR-08): segunda mano/particulares con aviso sin garantía
+    if podio.best_used_deal:
+        ud = podio.best_used_deal
+        lines.append("")
+        lines.append("♻️ <b>OCASIÓN A DESTACAR</b> <i>(segunda mano / particular — ⚠️ SIN garantía de tienda)</i>")
+        lines.append(f"🚲 <b>{ud.brand} {ud.model}</b>")
+        lines.append(f"💰 <b>{ud.price:.0f} €</b>")
+        lines.append(f"⚙️ {ud.drivetrain} • {_frenos_label(ud.has_hydraulic_brakes)}")
+        lines.append(f"📏 Talla {ud.size_compatibility}")
+        lines.append(f"🏪 {ud.store_name}{_channel_suffix(ud.store_name, ud.channel_type)}")
+        lines.append(f"⭐ Nota: <b>{ud.rubric_nota:.1f}/10 ({ud.rubric_tier})</b>")
+        if ud.product_url:
+            lines.append(f"🔗 <a href='{ud.product_url}'>Ver Oferta del Particular</a>")
 
     return "\n".join(lines)

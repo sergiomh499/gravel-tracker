@@ -17,8 +17,25 @@ KNOWN_BRANDS = [
     "KTM", "R-Raymon", "Raymon", "Cube", "BH", "Stevens", "Wilier",
     "Mondraker", "Polygon", "Marin", "Specialized", "Giant", "Kona", "Vitus",
     "Bianchi", "Radon", "Rose", "Mendiz", "Ridley", "Colnago", "Lapierre",
-    "Berria", "Fuji", "Salsa", "Cervélo", "Sunn", "Bombtrack", "NS Bikes", "Wolfbike", "Corredor"
+    "Berria", "Fuji", "Salsa", "Cervélo", "Sunn", "Bombtrack", "NS Bikes", "Wolfbike", "Corredor",
+    # Ampliación por anuncios reales observados en DB (antes "Desconocida")
+    "Whyte", "Centurion", "Bergamont", "Sunpeed", "Liv", "CBK", "Razesa", "Rizzo",
 ]
+_BRAND_CANONICAL = {b.lower(): b for b in KNOWN_BRANDS}
+
+# \b evita falsos positivos de subcadena (ej. "liv" dentro de "delivery")
+BRAND_RE = re.compile(r"\b(?:" + "|".join(re.escape(b) for b in KNOWN_BRANDS) + r")\b", re.IGNORECASE)
+
+def _transmision_desc(bike: Dict[str, Any]) -> str:
+    """Devuelve la descripción de transmisión sin duplicar el tipo (2x12/1x11), también en filas legacy."""
+    trans = str(bike.get("transmision", "") or "")
+    tipo = str(bike.get("tipo_transmision", "") or "")
+    if not tipo:
+        return trans
+    base = re.sub(rf"\s*\({re.escape(tipo)}\)\s*$", "", trans)
+    if tipo in base:
+        return base
+    return f"{base} ({tipo})".strip()
 
 def detect_bike_specs(title: str, description: str = "", price: float = 0.0, sizes: List[str] = None) -> Dict[str, Any]:
     """
@@ -29,12 +46,11 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
     sizes = sizes or []
     sizes_clean = [s.strip().lower() for s in sizes]
 
-    # 1. Marca
+    # 1. Marca (match por palabra completa; mapea a la forma canónica)
     marca = "Desconocida"
-    for b in KNOWN_BRANDS:
-        if b.lower() in full_text:
-            marca = b
-            break
+    m_brand = BRAND_RE.search(full_text)
+    if m_brand:
+        marca = _BRAND_CANONICAL.get(m_brand.group(0).lower(), "Desconocida")
 
     # 2. Disciplina
     disciplina = "gravel"
@@ -58,7 +74,11 @@ def detect_bike_specs(title: str, description: str = "", price: float = 0.0, siz
 
     if matched_dt:
         tipo_transmision = matched_dt.get("tipo", "2x10")
-        transmision_desc = f"{matched_dt.get('marca')} {matched_dt.get('modelo')} ({tipo_transmision})"
+        modelo_dt = str(matched_dt.get("modelo") or "")
+        if tipo_transmision and tipo_transmision not in modelo_dt:
+            transmision_desc = f"{matched_dt.get('marca')} {modelo_dt} ({tipo_transmision})"
+        else:
+            transmision_desc = f"{matched_dt.get('marca')} {modelo_dt}".strip()
         bio_info = evaluate_drivetrain_biomechanics(matched_dt.get("platos", []), matched_dt.get("cassette", []))
     else:
         tipo_transmision = "2x10"
@@ -413,7 +433,7 @@ def get_itemized_score_card(bike: Dict[str, Any]) -> Dict[str, Any]:
         "tienda_nombre": bike.get("tienda_nombre", "Online"),
         "tienda_tipo": bike.get("tienda_tipo", "online"),
         "c1": {"pts": cal["c1_frenos"], "max": 25, "label": "Frenos", "desc": str(bike.get("tipo_frenos", "")).replace("_", " ").capitalize()},
-        "c2": {"pts": cal["c2_transmision"], "max": 25, "label": "Transmisión", "desc": f"{bike.get('transmision', '')} ({bike.get('tipo_transmision', '')})"},
+        "c2": {"pts": cal["c2_transmision"], "max": 25, "label": "Transmisión", "desc": _transmision_desc(bike)},
         "c3": {"pts": cal["c3_cuadro"], "max": 20, "label": "Cuadro & Horquilla", "desc": f"{bike.get('cuadro', '')} / {bike.get('horquilla', '')}"},
         "c4": {"pts": cal["c4_precio"], "max": 20, "label": "Relación Precio VFM", "desc": f"{bike.get('precio_oferta', 0):.0f} €"},
         "c5": {"pts": cal["c5_talla"], "max": 10, "label": "Talla 1,69 m", "desc": str(bike.get("talla_recomendada_169", "S"))},

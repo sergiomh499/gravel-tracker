@@ -10,12 +10,12 @@ from typing import Dict, Any, List
 from gravel_bot.config import ALERT_CRITERIA, DB_PATH
 from gravel_bot.db import (
     init_db, get_or_create_store, upsert_bike,
-    record_price_if_changed, check_price_drop, was_alert_sent, mark_alert_sent
+    record_price_if_changed, check_price_drop, was_alert_sent, mark_alert_sent,
+    purge_obsolete_and_junior_models
 )
 from gravel_bot.evaluator import detect_bike_specs
 from gravel_bot.scrapers import get_all_scrapers
-from gravel_bot.notifier import send_telegram_alert, format_price_drop_message
-
+from gravel_bot.notifier import send_telegram_alert, format_price_drop_message, is_valid_purchase_url
 
 def sync_directorio_markdown(db_path: str = DB_PATH, md_path: str = "directorio_bicicletas.md"):
     """
@@ -123,7 +123,11 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
     5. Dispara alerta automática en Telegram si encuentra una ganga en Tier S+ o Tier S.
     """
     init_db()
-
+    # FR-02: barrido de ruido (junior/infantil/test/marca 'Desconocida') en el propio rastreo,
+    # no solo en auditorías — evita ventanas donde las superficies de cliente muestran resebrados.
+    purged = purge_obsolete_and_junior_models()
+    if purged.get("purged_bikes") or purged.get("purged_prices"):
+        print(f"🧹 [PURGA] {purged.get('purged_bikes', 0)} modelos y {purged.get('purged_prices', 0)} registros de precios fuera de catálogo eliminados.")
     scrapers = get_all_scrapers()
     total_scraped = 0
     saved_count = 0
@@ -200,9 +204,9 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
                 is_good_score = specs["nota"] >= ALERT_CRITERIA["nota_minima"]
                 is_affordable = specs["precio_oferta"] <= ALERT_CRITERIA["max_precio"]
                 is_valid_size = specs["talla_recomendada_169"] != "No compatible"
+                has_valid_link = is_valid_purchase_url(specs.get("url_oferta"))
 
-                if is_top_tier and is_good_score and is_affordable and is_valid_size:
-                    top_findings.append(specs)
+                if is_top_tier and is_good_score and is_affordable and is_valid_size and has_valid_link:
                     if send_alerts and not was_alert_sent(bike_id, specs["precio_oferta"]):
                         if verbose:
                             print(f"\n🚨 [ALERTA DISPARADA] {specs['marca']} {specs['modelo']} -> {specs['tier']} ({specs['nota']}/10) - {specs['precio_oferta']} €")
@@ -213,6 +217,12 @@ def run_pipeline(send_alerts: bool = True, verbose: bool = True, deep_scan: bool
 
         except Exception as e:
             print(f"❌ [ERROR] Fallo en scraper {scraper.name}: {e}")
+
+    # FR-02: purga adicional tras el rastreo — el loop de scrapers puede resembrar
+    # 'Desconocida'; hay que limpiar ANTES de regenerar snapshot y directorio (SC-02).
+    purged_end = purge_obsolete_and_junior_models()
+    if purged_end.get("purged_bikes") or purged_end.get("purged_prices"):
+        print(f"🧹 [PURGA] {purged_end.get('purged_bikes', 0)} modelos y {purged_end.get('purged_prices', 0)} registros de precios fuera de catálogo eliminados (post-rastreo).")
 
     # 5. Sincronizar directorio markdown y snapshot JSON automáticamente
     sync_directorio_markdown()

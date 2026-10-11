@@ -957,5 +957,211 @@ class TestGravelBotLegacyCoverage(unittest.TestCase):
         self.assertTrue(res["holgura_aplicada"])
         self.assertGreaterEqual(res["c4_precio"], 15.0)
         self.assertIn(res["tier"], ["Tier S+", "Tier S"])
+class TestTelegramAlertsCloudWorker(unittest.TestCase):
+    """Pruebas unitarias para formateo de Telegram, escape HTML, teclado inline y worker cloud (Feature 005)."""
+
+    def test_is_valid_purchase_url(self):
+        """Verifica que sólo URLs absolutas http/https con dominio sean aceptadas."""
+        from gravel_bot.notifier import is_valid_purchase_url
+        self.assertTrue(is_valid_purchase_url("https://www.escapa.com/bici-gravel"))
+        self.assertTrue(is_valid_purchase_url("http://mammothbikes.com/jakar-30"))
+        self.assertTrue(is_valid_purchase_url("https://tuvalum.com/p/megamo-jakar?ref=123"))
+
+        # URLs inválidas o relativas
+        self.assertFalse(is_valid_purchase_url("/es/c/bicicletas-gravel"))
+        self.assertFalse(is_valid_purchase_url("javascript:alert(1)"))
+        self.assertFalse(is_valid_purchase_url("ftp://inseguro.com/bici"))
+        self.assertFalse(is_valid_purchase_url(""))
+        self.assertFalse(is_valid_purchase_url(None))
+        self.assertFalse(is_valid_purchase_url("not-a-valid-url"))
+
+    def test_format_alert_message_html_escaped(self):
+        """Verifica que caracteres <, >, & se escapen para evitar rotura de parse_mode HTML."""
+        from gravel_bot.notifier import format_alert_message
+        malicious_bike = {
+            "marca": "Trek <Script>",
+            "modelo": "Checkpoint & Domane <SL5>",
+            "tier": "Tier S+ <VIP>",
+            "nota": 9.85,
+            "precio_oferta": 999.0,
+            "precio_pvp": 1499.0,
+            "talla_recomendada_169": "S (52 cm)",
+            "transmision": "Shimano GRX & Di2 <2x11>",
+            "frenos": "Frenos <Hidráulicos>",
+            "cuadro": "Aluminio & Horquilla <Carbono>",
+            "tienda_nombre": "Mammoth & Escapa <Madrid>",
+            "url_oferta": "https://www.mammothbikes.com/oferta"
+        }
+        msg = format_alert_message(malicious_bike)
+        self.assertNotIn("<Script>", msg)
+        self.assertIn("&lt;Script&gt;", msg)
+        self.assertIn("Checkpoint &amp; Domane &lt;SL5&gt;", msg)
+        self.assertIn("&lt;Hidráulicos&gt;", msg)
+        self.assertIn("Mammoth &amp; Escapa &lt;Madrid&gt;", msg)
+        self.assertIn("https://www.mammothbikes.com/oferta", msg)
+
+    def test_format_price_drop_message_html_escaped(self):
+        """Verifica el escapado en avisos de bajada de precio con caracteres reservados."""
+        from gravel_bot.notifier import format_price_drop_message
+        bike = {
+            "marca": "Megamo <Pro>",
+            "modelo": "Jakar 30 & Special",
+            "tienda_nombre": "Tuvalum & Reacondicionado",
+            "url_oferta": "https://tuvalum.com/bici"
+        }
+        drop = {
+            "old_price": 1200.0,
+            "new_price": 950.0,
+            "drop_eur": 250.0,
+            "drop_pct": 20.8
+        }
+        msg = format_price_drop_message(bike, drop)
+        self.assertNotIn("<Pro>", msg)
+        self.assertIn("&lt;Pro&gt;", msg)
+        self.assertIn("Jakar 30 &amp; Special", msg)
+        self.assertIn("-250.00 €", msg)
+
+    def test_build_telegram_payload_with_inline_keyboard(self):
+        """Verifica la construcción del payload de Telegram con botón inline directo a la tienda."""
+        from gravel_bot.notifier import build_telegram_payload
+        bike = {
+            "marca": "Orbea",
+            "modelo": "Terra H40",
+            "tienda_nombre": "Biciescapa Madrid",
+            "url_oferta": "https://www.escapa.com/orbea-terra-h40"
+        }
+        payload = build_telegram_payload(bike, chat_id=12345)
+        self.assertEqual(payload["chat_id"], 12345)
+        self.assertEqual(payload["parse_mode"], "HTML")
+        self.assertIn("reply_markup", payload)
+        kb = payload["reply_markup"]["inline_keyboard"]
+        self.assertEqual(len(kb), 1)
+        self.assertEqual(kb[0][0]["url"], "https://www.escapa.com/orbea-terra-h40")
+        self.assertIn("Biciescapa Madrid", kb[0][0]["text"])
+
+    def test_send_telegram_alert_suppresses_invalid_url(self):
+        """Verifica que send_telegram_alert descarte automáticamente bicicletas sin enlace web válido."""
+        from gravel_bot.notifier import send_telegram_alert
+        bike_no_url = {
+            "marca": "Ghost",
+            "modelo": "Asket",
+            "url_oferta": ""  # Sin URL
+        }
+        self.assertFalse(send_telegram_alert(bike_no_url))
+
+        bike_invalid_url = {
+            "marca": "Ghost",
+            "modelo": "Asket",
+            "url_oferta": "/solo/ruta/relativa"  # Enlace relativo, roto para Telegram
+        }
+        self.assertFalse(send_telegram_alert(bike_invalid_url))
+
+class TestRecommendationConsistency(unittest.TestCase):
+    """Pruebas para las inconsistencias de recomendaciones de cara al cliente (Feature 006)."""
+
+    def test_unknown_brand_is_noise(self):
+        """Las bicis sin marca identificable jamás entran al podio (choke point compartido)."""
+        from gravel_bot.budget_optimizer import is_noise_candidate
+        assert is_noise_candidate("Gravel Revolt 1", "Desconocida", "gravel", "Wallapop")
+        assert is_noise_candidate("de Gravel", "", "gravel", "Escapa")
+
+    def test_brand_detection_word_boundary(self):
+        """La detección de marca usa frontiere de palabra y lista ampliada (antes 'Desconocida')."""
+        from gravel_bot.evaluator import detect_bike_specs
+        specs = detect_bike_specs("Gravel Whyte Kings Cross Talla 52", price=600.0)
+        self.assertEqual(specs["marca"], "Whyte")
+        specs2 = detect_bike_specs("Bicicleta gravel para delivery premium, talla M", price=600.0)
+        self.assertNotEqual(specs2["marca"], "Liv")
+        # 'liv' no debe casar por subcadena
+        specs3 = detect_bike_specs("Gravel/CX LIV Brava Talla S", price=600.0)
+        self.assertEqual(specs3["marca"], "Liv")
+
+    def test_size_compatible_rejects_dudosa_verdict(self):
+        """El veredicto dinámico incompatibile expulsa al candidato (bug: compat=False caía a return True)."""
+        from gravel_bot.budget_optimizer import is_size_compatible
+        # Solo tallas rechazadas (XXL) => motor dinámico devuelve compat=False; el código antiguo devolvía True
+        compatible, label = is_size_compatible("S (51-52 cm)", "XXL", 169, marca="Megamo", modelo="Jakar")
+        self.assertFalse(compatible)
+        # "Consultar tienda" no es talla: se respeta la talla almacenada (edge case de la spec)
+        compatible2, _ = is_size_compatible("S (51-52 cm)", "Consultar tienda", 169, marca="Van Rysel", modelo="Gravel GRVL AF")
+        self.assertTrue(compatible2)
+
+    def test_drivetrain_token_never_duplicated(self):
+        """El tipo de transmisión se renderiza una sola vez (FR-03)."""
+        from gravel_bot.budget_optimizer import _transmision_drivetrain
+
+        class Row(dict):
+            def __getitem__(self, k): return self.get(k, "")
+
+        self.assertEqual(_transmision_drivetrain(Row(transmision="Shimano CUES U6000 1x11 (1x11)", tipo_transmision="1x11")), "Shimano CUES U6000 1x11")
+        self.assertEqual(_transmision_drivetrain(Row(transmision="Shimano GRX RX-820 (2x12)", tipo_transmision="2x12")), "Shimano GRX RX-820 (2x12)")
+        self.assertEqual(_transmision_drivetrain(Row(transmision="Shimano GRX RX-400", tipo_transmision="2x10")), "Shimano GRX RX-400 (2x10)")
+
+    def test_legacy_db_rows_render_without_duplication(self):
+        """Filas reales del catálogo (con duplicado sembrado por el evaluator antiguo) renderizan limpio."""
+        import re as _re
+        from gravel_bot.db import get_connection
+        from gravel_bot.budget_optimizer import _transmision_drivetrain
+        from gravel_bot.evaluator import _transmision_desc
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT transmision, tipo_transmision FROM bicicletas WHERE tipo_transmision != '' LIMIT 200")
+        rows = c.fetchall()
+        conn.close()
+
+        class Row(dict):
+            def __getitem__(self, k): return self.get(k, "")
+
+        for r in rows:
+            trans, tipo = r["transmision"] or "", r["tipo_transmision"] or ""
+            if not tipo:
+                continue
+            for rendered in (_transmision_drivetrain(Row(transmision=trans, tipo_transmision=tipo)),
+                             _transmision_desc({"transmision": trans, "tipo_transmision": tipo})):
+                self.assertIsNone(
+                    _re.search(r"(\d+x\d+)\s*\(\1\)", rendered),
+                    f"Duplicado al renderizar fila real: {rendered!r} (origen: {trans!r})"
+                )
+
+    def test_channel_suffix_no_duplicate(self):
+        """El calificador de canal se muestra una sola vez y con acentos correctos (FR-04)."""
+        from gravel_bot.budget_optimizer import _channel_suffix
+        self.assertEqual(_channel_suffix("Wallapop (Particulares Madrid 25km)", "particular"), "")
+        self.assertEqual(_channel_suffix("Biciescapa Madrid", "tienda_fisica"), " (Tienda física)")
+        self.assertEqual(_channel_suffix("Sanferbike Online", "tienda_online"), " (Tienda online)")
+
+    def test_used_deal_block_rendering(self):
+        """Los chollos de segunda mano renderizan en bloque separado con aviso de garantía (FR-08/SC-05)."""
+        from gravel_bot.budget_optimizer import RecommendationPodio, CleanCandidateBike, BudgetQuery, format_budget_recommendation_card, format_budget_podio_html
+        class Row(dict):
+            def __getitem__(self, k): return self.get(k, "")
+        # Sin acoplar a DB: el formateador trabaja sobre RecommendationPodio construido a mano
+        from gravel_bot.budget_optimizer import RecommendationPodio, CleanCandidateBike, BudgetQuery
+        used = CleanCandidateBike(
+            id=999, slug="trek-checkpoint-alr5", brand="Trek", model="Checkpoint ALR 5 (2019)",
+            price=820.0, pvp=1200.0, discount_pct=31.7, discipline="gravel",
+            frame_material="Aluminio", fork_material="Aluminio",
+            drivetrain="Shimano GRX RX-400 (2x10)", brake_type="hidraulico",
+            has_hydraulic_brakes=True, has_carbon_fork=False,
+            available_sizes=["S (51-52 cm)"], size_compatibility="S (51-52 cm)",
+            store_name="Wallapop (Particulares Madrid 25km)", channel_type="particular",
+            product_url="https://es.wallapop.com/item/trek", rubric_score=98.0, rubric_nota=9.8,
+            rubric_tier="Tier S+", vfm_index=119.5
+        )
+        podio = RecommendationPodio(
+            query=BudgetQuery(budget_ceiling=1200.0, rider_height_cm=169, target_size=None, channel_filter="all", include_stretch=True),
+            total_candidates_scanned=10, valid_candidates_count=1,
+            best_used_deal=used
+        )
+        text = format_budget_recommendation_card(podio, format="text")
+        self.assertIn("♻️ OCASIÓN A DESTACAR", text)
+        self.assertIn("SIN garantía de tienda", text)
+        self.assertNotIn("(Particular) (Particular)", text)
+        self.assertNotIn("Wallapop (Particulares Madrid 25km) (Particular)", text)
+        html = format_budget_podio_html(podio)
+        self.assertIn("♻️ <b>OCASIÓN A DESTACAR</b>", html)
+        self.assertIn("SIN garantía de tienda", html)
+
 if __name__ == "__main__":
     unittest.main()
