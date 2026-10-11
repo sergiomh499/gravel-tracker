@@ -169,8 +169,8 @@ def send_telegram_alert(bike_or_text: Any, chat_id: Optional[Any] = None) -> boo
                 label = f"{bike_or_text.get('marca', '')} {bike_or_text.get('modelo', '')}" if isinstance(bike_or_text, dict) else "Mensaje informativo"
                 print(f"✅ Alerta Telegram enviada con éxito ({label})")
                 return True
-                print(f"❌ Error en respuesta Telegram: {res_body}")
-                return False
+            print(f"❌ Error en respuesta Telegram: {res_body}")
+            return False
     except urllib.error.HTTPError as e:
         err_content = e.read().decode("utf-8", errors="ignore")
         print(f"❌ Error HTTP Telegram ({e.code}): {err_content}")
