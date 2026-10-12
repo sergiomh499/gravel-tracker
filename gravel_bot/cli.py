@@ -149,6 +149,28 @@ def cmd_gear(args):
     sub = getattr(args, "tipo", "2x") or "2x"
     print(format_gear_simulation_message(sub))
 
+def cmd_validate(args):
+    """Valida e intenta auto-reparar la integridad del catálogo completo."""
+    init_db()
+    from gravel_bot.validator import run_full_catalog_validation
+    limit = getattr(args, "limit", None)
+    run_full_catalog_validation(auto_repair=True, limit=limit, verbose=True)
+
+
+def cmd_sync_doc(args):
+    """Sincroniza directorio_bicicletas.md y catalog_snapshot.json desde la BD."""
+    from gravel_bot.pipeline import sync_directorio_markdown, export_catalog_snapshot
+    sync_directorio_markdown()
+    export_catalog_snapshot()
+
+
+def cmd_bot(args):
+    """Ejecuta el bot de Telegram en modo polling (usado por el workflow cloud cada 30 min)."""
+    from gravel_bot.bot_service import run_bot_polling
+    duration = getattr(args, "duration", None)
+    run_bot_polling(duration_seconds=duration)
+
+
 def cmd_cloud_sync(args):
     """Sincroniza los secretos de .env en GitHub Actions Secrets mediante gh CLI y verifica el worker."""
     import subprocess
@@ -289,6 +311,13 @@ def main(args_list: Optional[List[str]] = None):
     # cloud-sync
     parser_cloud = subparsers.add_parser("cloud-sync", aliases=["sync-cloud", "cloud"], help="Sincronizar secretos en GitHub Actions para ejecución 24/7 en la nube")
     parser_cloud.add_argument("--trigger", "-t", action="store_true", help="Disparar ejecución de prueba inmediata en GitHub Cloud")
+
+    # validate / sync-doc / bot
+    parser_validate = subparsers.add_parser("validate", help="Validar y auto-reparar la integridad del catálogo")
+    parser_validate.add_argument("--limit", "-l", type=int, default=None, help="Limitar número de bicicletas validadas")
+    subparsers.add_parser("sync-doc", help="Regenerar directorio_bicicletas.md y catalog_snapshot.json")
+    parser_bot = subparsers.add_parser("bot", help="Ejecutar el bot de Telegram en modo polling")
+    parser_bot.add_argument("duration", type=int, nargs="?", default=None, help="Duración en segundos (ej. 1500 en GitHub Actions)")
     raw_args = list(sys.argv[1:] if args_list is None else args_list)
     if not raw_args:
         cmd_list(argparse.Namespace(tier=None))
@@ -320,6 +349,9 @@ def main(args_list: Optional[List[str]] = None):
         "--cloud-sync": "cloud-sync",
         "--sync-cloud": "cloud-sync",
         "--cloud": "cloud-sync",
+        "--validate": "validate",
+        "--sync-doc": "sync-doc",
+        "--bot": "bot",
     }
     if raw_args and raw_args[0] in cmd_map:
         raw_args[0] = cmd_map[raw_args[0]]
@@ -352,6 +384,12 @@ def main(args_list: Optional[List[str]] = None):
         cmd_gear(args)
     elif args.command in ["cloud-sync", "sync-cloud", "cloud"]:
         cmd_cloud_sync(args)
+    elif args.command == "validate":
+        cmd_validate(args)
+    elif args.command == "sync-doc":
+        cmd_sync_doc(args)
+    elif args.command == "bot":
+        cmd_bot(args)
     else:
         cmd_list(args)
 if __name__ == "__main__":
